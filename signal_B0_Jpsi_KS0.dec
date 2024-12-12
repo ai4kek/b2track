@@ -1,0 +1,20 @@
+# Signal: Y(4S) --> B0 B0bar, B0 --> J/Psi (mu+ mu-) K_S0 (pi+ pi-)
+
+Decay Upsilon(4S)
+1.0 B0 anti-B0  VSS_BMIX dm;
+Enddecay
+
+Decay B0
+1.0 J/psi K_S0 PHSP;
+Enddecay
+CDecay anti-B0
+
+Decay J/psi
+1.0 mu+ mu- VLL;
+Enddecay
+
+Decay K_S0
+1.0 pi+ pi- PHSP;
+Enddecay
+
+End
