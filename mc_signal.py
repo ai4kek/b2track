@@ -16,7 +16,7 @@ main.add_module('EventInfoSetter', evtNumList=[10], expList=[0])
 ge.add_evtgen_generator(
     path=main,
     finalstate='signal',
-    signaldecfile=b2.find_file('mc_decay_file.dec')
+    signaldecfile=b2.find_file('signal_B0_Jpsi_KS0.dec')
 )
 
 # Simulate the detector response and the L1 trigger
@@ -26,7 +26,7 @@ si.add_simulation(path=main)
 re.add_reconstruction(path=main)
 
 # Create the mDST output file
-mdst.add_mdst_output(path=main, filename='mc_mdst_signal.root')
+mdst.add_mdst_output(path=main, filename='signal_B0_Jpsi_KS0.root')
 
 # Process the steering path
 b2.process(path=main)

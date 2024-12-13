@@ -16,7 +16,7 @@ main.add_module('EventInfoSetter', evtNumList=[10], expList=[0])
 ge.add_evtgen_generator(
     path=main,
     finalstate='mixed',
-    ignaldecfile=None
+    signaldecfile=None
     )
 
 # Simulate the detector response and the L1 trigger
