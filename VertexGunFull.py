@@ -9,7 +9,8 @@
 # This file is licensed under LGPL-3.0, see LICENSE.md.                  #
 ##########################################################################
 
-from basf2 import set_log_level, LogLevel, register_module, create_path, process, statistics, set_random_seed, print_params
+from basf2 import set_log_level, LogLevel, register_module, create_path, \
+    process, statistics, set_random_seed, print_params
 
 # suppress messages and warnings during processing:
 set_log_level(LogLevel.ERROR)
@@ -117,7 +118,7 @@ output = register_module('RootOutput')
 eventinfosetter.param({'evtNumList': [10], 'runList': [1]})
 
 # Set output filename
-output.param('outputFileName', 'ParticleGunOutput.root')
+output.param('outputFileName', 'VertexGunOutput.root')
 
 # ============================================================================
 # Do the simulation

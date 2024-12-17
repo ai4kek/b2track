@@ -18,6 +18,7 @@ from basf2 import create_path, register_module, process, logging, \
 from ROOT import TH1D, TH2D, TCanvas, Belle2, PyConfig
 
 logging.log_level = LogLevel.WARNING
+
 # reenable GUI thread for our canvas
 PyConfig.StartGuiThread = True
 
@@ -29,6 +30,7 @@ h_pt = TH1D('pt', 'Transverse Momentum p_{t};p_{t}/GeV', 200, 0, 10)
 h_phi = TH1D('phi', 'azimuthal angle #phi; #phi in degree', 200, -180, 180)
 h_theta = TH1D('theta', 'polar angle #theta; #theta in degree', 200, 0, 180)
 h_costheta = TH1D('costheta', 'cos(#theta); cos(#theta)', 200, -1, 1)
+
 h_xyvertex = TH2D('xyvertex', 'vertex in xy;x/#mum;y/#mum',
                   500, -500, 500, 500, -500, 500)
 h_zxvertex = TH2D('zxvertex', 'vertex in zx;z/#mum;x/#mum',
@@ -46,8 +48,8 @@ class ShowMCParticles(Module):
         h_nTracks.Fill(mcParticles.getEntries())
         for mc in mcParticles:
             p = mc.getMomentum()
-            h_momentum.Fill(p.Mag())
-            h_pt.Fill(p.Perp())
+            h_momentum.Fill(p.Rho())
+            h_pt.Fill(p.R())
             h_phi.Fill(p.Phi() / math.pi * 180)
             h_theta.Fill(p.Theta() / math.pi * 180)
             h_costheta.Fill(math.cos(p.Theta()))
@@ -97,24 +99,6 @@ particlegun.param({
     'zVertexParams': [0],
     # all tracks should originate from the same vertex
     'independentVertices': False,
-})
-
-
-# The beamspot size is determined by using the beamsize for LER and HER from
-# the TDR, multiply both zx-distributions including their crossing angle and
-# fit a rotated 2D gaussian to the resulting shape.
-# Parameters used (angle is the angle between beam and z axis):
-# HER: sigma_x = 10.2µm, sigma_z = 6mm, angle= 41.5mrad
-# LER: sigma_x = 7.76µm, sigma_z = 5mm, angle=-41.5mrad
-vertexsmear.param({
-    # Beamspot size in x
-    'sigma_pvx': 6.18e-4,  # µm
-    # Beamspot size in y
-    'sigma_pvy': 59e-7,    # nm
-    # Beamspot size in z
-    'sigma_pvz': 154e-4,   # µm
-    # Angle between beamspot and z axis, rotation around y
-    'angle_pv_zx': -1.11e-2,
 })
 
 
