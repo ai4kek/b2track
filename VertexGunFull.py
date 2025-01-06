@@ -139,10 +139,12 @@ eventinfosetter.param({"evtNumList": [10], "runList": [1]})
 # Set output filename
 output.param("outputFileName", "pg_output_vertex.root")
 
-# ============================================================================
-# Do the simulation
+# Print MC particle info per event
 mcparticleprinter = register_module("PrintMCParticles")
 mcparticleprinter.logging.log_level = LogLevel.INFO
+
+# ============================================================================
+# Do the simulation
 
 main = create_path()
 main.add_module(eventinfosetter)
