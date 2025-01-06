@@ -9,14 +9,22 @@
 # This file is licensed under LGPL-3.0, see LICENSE.md.                  #
 ##########################################################################
 
-from basf2 import set_log_level, register_module, process, LogLevel, \
-    set_random_seed, print_params, create_path, statistics
+from basf2 import (
+    set_log_level,
+    register_module,
+    process,
+    LogLevel,
+    set_random_seed,
+    print_params,
+    create_path,
+    statistics,
+)
 
 # suppress messages and warnings during processing:
 set_log_level(LogLevel.WARNING)
 
 # to run the framework the used modules need to be registered
-particlegun = register_module('ParticleGun')
+particlegun = register_module("ParticleGun")
 
 # ============================================================================
 # Setting the random seed for particle generation
@@ -32,12 +40,12 @@ set_random_seed(123)
 # randomly amongst the PDGcodes using a uniform distribution if nTracks>0,
 # otherwise there will be one particle for each code in the list default is
 # [-11, 11]
-particlegun.param('pdgCodes', [-11, 11])
+particlegun.param("pdgCodes", [-11, 11])
 
 # ============================================================================
 # Setting the number of tracks to be generated per event: this number can be
 # any int>=0 default is 1
-particlegun.param('nTracks', 10)
+particlegun.param("nTracks", 10)
 
 # a value o 0 means that a track should be created for each entry in the
 # pdgCodes list, e.g. the following two lines would create two electrons and
@@ -50,7 +58,7 @@ particlegun.param('nTracks', 10)
 # to True. If so, the number of tracks will be randomized using possion
 # distribution around the value of nTracks.  Only valid if nTracks>0, default
 # is False
-particlegun.param('varyNTracks', False)
+particlegun.param("varyNTracks", False)
 
 # ============================================================================
 # Each particle has a total momentum, a direction given as theta and phi and a
@@ -93,8 +101,8 @@ particlegun.param('varyNTracks', False)
 # Momentum generation
 #
 # The default is a uniform momentum distribution between 0.05 and 3 GeV
-particlegun.param('momentumGeneration', 'uniform')
-particlegun.param('momentumParams', [0.05, 3])
+particlegun.param("momentumGeneration", "uniform")
+particlegun.param("momentumParams", [0.05, 3])
 
 # we could also generate a fixed momentum of 1 GeV
 # particlegun.param('momentumGeneration', "fixed")
@@ -117,8 +125,8 @@ particlegun.param('momentumParams', [0.05, 3])
 # polar angle, theta
 # The default is a uniform theta distribution between 17 and 150 degree
 
-particlegun.param('thetaGeneration', 'uniform')
-particlegun.param('thetaParams', [17, 150])
+particlegun.param("thetaGeneration", "uniform")
+particlegun.param("thetaParams", [17, 150])
 
 # We could also generate between 17 and 150 degrees with a flat distribution in
 # cos(theta)
@@ -145,8 +153,8 @@ particlegun.param('thetaParams', [17, 150])
 # azimuth angle, phi
 # The default is a uniform theta distribution between 0 and 360 degree
 
-particlegun.param('phiGeneration', 'uniform')
-particlegun.param('phiParams', [0, 360])
+particlegun.param("phiGeneration", "uniform")
+particlegun.param("phiParams", [0, 360])
 
 # or we could create a normal distributed phi angle around 90 degrees with a
 # width of 5 degrees
@@ -156,10 +164,10 @@ particlegun.param('phiParams', [0, 360])
 # ============================================================================
 # Vertex generation
 # The default is a fixed vertex at (0,0,0) for all tracks
-particlegun.param('vertexGeneration', 'fixed')
-particlegun.param('xVertexParams', [0])
-particlegun.param('yVertexParams', [0])
-particlegun.param('zVertexParams', [0])
+particlegun.param("vertexGeneration", "fixed")
+particlegun.param("xVertexParams", [0])
+particlegun.param("yVertexParams", [0])
+particlegun.param("zVertexParams", [0])
 
 # We could also generate a normal distributed vertex with mean at (0,0,0) and
 # width of 10µm, 60nm and 190 µm in x, y and z respectively
@@ -181,7 +189,7 @@ particlegun.param('zVertexParams', [0])
 # Setting independent vertices for each particle The default is to create one
 # event vertex for all particles per event. By setting independentVertices to
 # True, a new vertex will be created for each particle default is False
-particlegun.param('independentVertices', False)
+particlegun.param("independentVertices", False)
 
 # ============================================================================
 # Print the parameters of the particle gun
@@ -191,32 +199,32 @@ print_params(particlegun)
 # Now lets create the necessary modules to perform a simulation
 
 # Create Event information
-eventinfosetter = register_module('EventInfoSetter')
+eventinfosetter = register_module("EventInfoSetter")
 
 # Show progress of processing
-progress = register_module('Progress')
+progress = register_module("Progress")
 
 # Load parameters
-gearbox = register_module('Gearbox')
+gearbox = register_module("Gearbox")
 
 # Create geometry
-geometry = register_module('Geometry')
+geometry = register_module("Geometry")
 
 # Run simulation
-simulation = register_module('FullSim')
+simulation = register_module("FullSim")
 
 # Save output of simulation
-output = register_module('RootOutput')
+output = register_module("RootOutput")
 
 # Setting the option for all non particle gun modules: want to process 10-100
 # MC events
-eventinfosetter.param({'evtNumList': [10], 'runList': [1]})
+eventinfosetter.param({"evtNumList": [10], "runList": [1]})
 
 # Set output filename
-output.param('outputFileName', 'pg_output.root')
+output.param("outputFileName", "pg_output.root")
 
 # Print MC particle info per event
-mcparticleprinter = register_module('PrintMCParticles')
+mcparticleprinter = register_module("PrintMCParticles")
 mcparticleprinter.logging.log_level = LogLevel.INFO
 
 # ============================================================================
@@ -227,9 +235,11 @@ main.add_module(eventinfosetter)
 main.add_module(progress)
 main.add_module(gearbox)
 main.add_module(geometry)
-main.add_module(particlegun)
-# main.add_module(mcparticleprinter)
-main.add_module(simulation)
+
+main.add_module(particlegun)  # event generator
+main.add_module(mcparticleprinter)  # print generated particles
+main.add_module(simulation)  # detector simulation
+
 main.add_module(output)
 
 # Process events
