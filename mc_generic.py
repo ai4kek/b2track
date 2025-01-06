@@ -21,9 +21,11 @@ ge.add_evtgen_generator(
 
 # Simulate the detector response and the L1 trigger
 si.add_simulation(path=main)
+# or si.add_simulation(main, components) to simulate a selection of detectors and triggr
 
 # Reconstruct the objects
 re.add_reconstruction(path=main)
+# or re.add_reconstruction(main, components) to run the reconstruction of a selection of detectors
 
 # Create the mDST output file
 mdst.add_mdst_output(path=main, filename='mc_mdst_generic.root')
