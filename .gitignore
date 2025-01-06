@@ -62,7 +62,8 @@
 .ipynb_checkpoints
 .virtual_documents
 __pycache__
-
+Papers
+Talks
 managed_context
 test_suite_analysis
 
