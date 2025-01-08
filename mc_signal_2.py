@@ -4,20 +4,17 @@ import basf2 as b2
 import generators as ge
 import simulation as si
 import reconstruction as re
-import mdst
 
 # Create the steering path
-main = b2.Path()
+# main = b2.Path()
+main = b2.create_path()
 
 # Define number of events and experiment number
 main.add_module("EventInfoSetter", evtNumList=[10], expList=[0])
 
-# Generate generic events (finalstate='mixed' (B0B0bar), 'charged' (B+B-))
+# Generate signal events (finalstate='signal', signaldecfile=xyz.dec)
 ge.add_evtgen_generator(
-    path=main,
-    # finalstate='charged',
-    finalstate="mixed",
-    signaldecfile=None,
+    path=main, finalstate="signal", signaldecfile=b2.find_file("signal_B0_Jpsi_KS0.dec")
 )
 
 # Simulate the detector response and the L1 trigger
@@ -28,9 +25,11 @@ si.add_simulation(path=main)
 re.add_reconstruction(path=main)
 # or re.add_reconstruction(main, components) to run the reconstruction of a selection of detectors
 
-# Create the mDST output file
-# mdst.add_mdst_output(path=main, filename='generic_mc_charged.root')
-mdst.add_mdst_output(path=main, filename="generic_mc_mixed.root")
+# Remaining Modules
+main.add_module("Progress")
+main.add_module("Gearbox")
+main.add_module("RootOutput", outputFileName="signal_B0_Jpsi_KS0_2.root")
+main.add_module("PrintMCParticles", logLevel=b2.LogLevel.DEBUG, onlyPrimaries=False)
 
 # Process the steering path
 b2.process(path=main)

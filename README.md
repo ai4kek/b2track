@@ -1,8 +1,21 @@
-# b2trkx
+# Belle II Tracking
 
 Playground for Belle II Tracking.
 
-## b2display
+## Belle II Simulation
+
+There are three steps:
+
+- _`Event Generation` (EvtGen, Particle Gun, etc)_
+- _`Detector Simulation` (Particle Interactions + Signal Digitization)_
+- _`Reconstruction` (Tracks + Clusters)_
+
+There are two ways to create a steering file: direct, and indirect.
+
+- _Direct: `main = basf2.Path`, `main.add_module()` or `basf2.some_module (path=main)`, `basf2.Process()`, etc._
+- _Indirect: `module = basf2.register_module("Moduel Name")`, `module.Param("Param Name", "Values")`, `main = basf2.create_path()`, `main.add_module(module)`, `basf2.Process()`, etc._
+
+## Belle II Display
 
 ```bash
 # fix for evtdisplay
