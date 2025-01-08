@@ -13,9 +13,8 @@ main = b2.create_path()
 main.add_module("EventInfoSetter", evtNumList=[10], expList=[0])
 
 # Generate signal events (finalstate='signal', signaldecfile=xyz.dec)
-ge.add_evtgen_generator(
-    path=main, finalstate="signal", signaldecfile=b2.find_file("signal_B0_Jpsi_KS0.dec")
-)
+decfile = b2.find_file("signal_B0_Jpsi_KS0.dec")
+ge.add_evtgen_generator(path=main, finalstate="signal", signaldecfile=decfile)
 
 # Simulate the detector response and the L1 trigger
 si.add_simulation(path=main)

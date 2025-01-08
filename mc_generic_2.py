@@ -4,7 +4,6 @@ import basf2 as b2
 import generators as ge
 import simulation as si
 import reconstruction as re
-import mdst
 
 # Create the steering path
 # main = b2.Path()
