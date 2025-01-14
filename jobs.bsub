@@ -1,0 +1,21 @@
+#!/bin/bash
+
+#BSUB -n 4
+#BSUB -q submission_queue
+#BSUB -J analysis1
+#BSUB -G my_group
+#BSUB -M 8000000
+#BSUB -W 08:00
+#BSUB -R "rusage[mem=2000]"
+#BSUB -R "rusage[scratch=1000]"    # per core
+#BSUB -o analysis1.%J.out
+#BSUB -e analysis1.%J.err
+
+# module load <module name>
+
+source /export/home/adeel/belle2/tools/b2setup
+source /export/home/adeel/belle2/develop/b2setup
+
+command1
+command2
+

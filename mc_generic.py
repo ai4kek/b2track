@@ -15,7 +15,7 @@ main.add_module("EventInfoSetter", evtNumList=[10], expList=[0])
 # Generate generic events (finalstate='mixed' (B0B0bar), 'charged' (B+B-))
 ge.add_evtgen_generator(
     path=main,
-    # finalstate='charged',
+    # finalstate='charged',  # OR
     finalstate="mixed",
     signaldecfile=None,
 )

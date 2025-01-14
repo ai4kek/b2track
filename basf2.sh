@@ -1,10 +1,14 @@
 #!/bin/bash
 
-# setup basf2 on KEKCC/NAF
+# setup a basf2 release on KEKCC/NAF
 # source /cvmfs/belle.cern.ch/tools/b2setup release-08-02-04
 
-# setup basf2 on KEKCC/NAF
-source /export/home/adeel/belle2/tools/b2setup release-08-02-04
+# setup a basf2 release on PC
+# source /export/home/adeel/belle2/tools/b2setup release-08-02-04
+
+# setup a basf2 development on PC
+source /export/home/adeel/belle2/tools/b2setup
+source /export/home/adeel/belle2/develop/b2setup
 
 # steering file
 steering_file="mc_signal.py"
