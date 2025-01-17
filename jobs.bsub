@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# submit jobs as
+# bsub < jobs.bsub
+
 #BSUB -n 4
 #BSUB -q submission_queue
 #BSUB -J analysis1
@@ -13,9 +16,9 @@
 
 # module load <module name>
 
+# source software
 source /export/home/adeel/belle2/tools/b2setup
 source /export/home/adeel/belle2/develop/b2setup
 
-command1
-command2
+basf2 steering.py
 

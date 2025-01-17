@@ -58,14 +58,12 @@
 # ----------------------------------
 # Directories
 # ----------------------------------
+__pycache__
 .vscode
 .ipynb_checkpoints
 .virtual_documents
-__pycache__
-managed_context
-test_suite_analysis
+
+venv*
 develop
 papers
 talks
-
-
