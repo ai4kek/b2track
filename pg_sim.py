@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
 
+# Run Script: `basf2 pg_sim.py > pg_sim.log 2>&1`          # OR
+# Run Script: `basf2 pg_sim.py 2>&1 | tee pg_sim.log`
+
+
 import basf2 as b2
 import generators as ge
 import simulation as si
@@ -86,3 +90,6 @@ b2.process(path=main)
 
 # Print out statistics about the modules execution
 print(b2.statistics)
+
+# Print Modules
+b2.print_path(main)
