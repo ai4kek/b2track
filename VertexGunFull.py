@@ -132,32 +132,27 @@ simulation = register_module("FullSim")
 # Save output of simulation
 output = register_module("RootOutput")
 
-# Setting the option for all non particle gun modules: want to process 10-100
-# MC events
+# Setting the option for all non particle gun modules: want to process 100 MC
+# events
 eventinfosetter.param({"evtNumList": [10], "runList": [1]})
 
 # Set output filename
-output.param("outputFileName", "pg_output_vertex.root")
-
-# Print MC particle info per event
-mcparticleprinter = register_module("PrintMCParticles")
-mcparticleprinter.logging.log_level = LogLevel.INFO
+output.param("outputFileName", "ParticleGunOutput.root")
 
 # ============================================================================
 # Do the simulation
-
+mcparticleprinter = register_module("PrintMCParticles")
+mcparticleprinter.logging.log_level = LogLevel.INFO
 main = create_path()
 main.add_module(eventinfosetter)
 main.add_module(progress)
 main.add_module(gearbox)
 main.add_module(geometry)
-
-main.add_module(vertex1)  # event generator 1
-main.add_module(vertex2)  # event generator 2
-main.add_module(vertex3)  # event generator 3
-main.add_module(mcparticleprinter)  # print generated particles
-main.add_module(simulation)  # detector simulation
-
+main.add_module(vertex1)
+main.add_module(vertex2)
+main.add_module(vertex3)
+main.add_module(mcparticleprinter)
+main.add_module(simulation)
 main.add_module(output)
 
 # Process events

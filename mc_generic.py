@@ -12,25 +12,30 @@ main = b2.Path()
 # Define number of events and experiment number
 main.add_module("EventInfoSetter", evtNumList=[10], expList=[0])
 
-# Generate generic events (finalstate='mixed' (B0B0bar), 'charged' (B+B-))
+# Generate generic events (finalstate="mixed" (B0B0bar), "charged" (B+B-))
+
+final_state = "mixed"
 ge.add_evtgen_generator(
     path=main,
-    # finalstate='charged',  # OR
-    finalstate="mixed",
+    finalstate=final_state,
     signaldecfile=None,
 )
 
 # Simulate the detector response and the L1 trigger
 si.add_simulation(path=main)
-# or si.add_simulation(main, components) to simulate a selection of detectors and triggr
+# or si.add_simulation(main, components) to simulate a selection of detectors and trigger
 
 # Reconstruct the objects
 re.add_reconstruction(path=main)
 # or re.add_reconstruction(main, components) to run the reconstruction of a selection of detectors
 
 # Create the mDST output file
-# mdst.add_mdst_output(path=main, filename='generic_mc_charged.root')
-mdst.add_mdst_output(path=main, filename="generic_mc_mixed.root")
+if final_state == "mixed":
+    output_filename = "mc_generic_mixed.root"
+else:
+    output_filename = "mc_generic_charged.root"
+
+mdst.add_mdst_output(path=main, filename=output_filename)
 
 # Process the steering path
 b2.process(path=main)

@@ -20,6 +20,9 @@ from basf2 import (
     statistics,
 )
 
+import simulation as si
+import reconstruction as re
+
 # suppress messages and warnings during processing:
 set_log_level(LogLevel.WARNING)
 
@@ -210,10 +213,7 @@ gearbox = register_module("Gearbox")
 # Create geometry
 geometry = register_module("Geometry")
 
-# Run simulation
-simulation = register_module("FullSim")
-
-# Save output of simulation
+# Save output of generator
 output = register_module("RootOutput")
 
 # Setting the option for all non particle gun modules: want to process 10-100
@@ -221,7 +221,7 @@ output = register_module("RootOutput")
 eventinfosetter.param({"evtNumList": [10], "runList": [1]})
 
 # Set output filename
-output.param("outputFileName", "pg_output.root")
+output.param("outputFileName", "pg_gen.root")
 
 # Print MC particle info per event
 mcparticleprinter = register_module("PrintMCParticles")
@@ -231,14 +231,16 @@ mcparticleprinter.logging.log_level = LogLevel.INFO
 # Do the simulation
 
 main = create_path()
-main.add_module(eventinfosetter)
-main.add_module(progress)
-main.add_module(gearbox)
-main.add_module(geometry)
-
+main.add_module(eventinfosetter)  # create event information
+main.add_module(progress)  # show progress of processing
 main.add_module(particlegun)  # event generator
 main.add_module(mcparticleprinter)  # print generated particles
-main.add_module(simulation)  # detector simulation
+
+# Detector Simulation
+# si.add_simulation(path=main)
+
+# Object Reconstruction
+# re.add_reconstruction(path=main)
 
 main.add_module(output)
 
