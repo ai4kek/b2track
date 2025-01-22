@@ -62,6 +62,10 @@ gearbox = register_module("Gearbox")
 # Create geometry
 geometry = register_module("Geometry")
 
+# Save output of generator
+output = register_module("RootOutput")
+output.param("outputFileName", "pg_gen.root")
+
 # Print MC particle info per event
 mcparticleprinter = register_module("PrintMCParticles")
 mcparticleprinter.logging.log_level = LogLevel.INFO
@@ -70,17 +74,13 @@ mcparticleprinter.logging.log_level = LogLevel.INFO
 
 # Do the simulation
 main = b2.create_path()
+
 main.add_module(eventinfosetter)
 main.add_module(progress)
 main.add_module(pg_gun)
 main.add_module(mcparticleprinter)
 
-# Detector Simulation (also loads Gearbox, Geometry, etc.)
-si.add_simulation(path=main)
-
-# Create the mDST output file
-main.add_module("RootOutput", outputFileName="pg_sim.root")  # save everything
-# mdst.add_mdst_output(path=main, filename="pg_sim.root")  # save subset of above
+main.add_module(output)
 
 # Print Modules
 # b2.print_path(main)

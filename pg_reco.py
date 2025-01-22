@@ -21,13 +21,16 @@ main.add_module("RootInput", inputFileName="pg_sim.root")
 re.add_reconstruction(path=main)
 
 # Create the mDST output file
-main.add_module("RootOutput", outputFileName="pg_reco.root")
+# main.add_module("RootOutput", outputFileName="pg_reco.root")  # save everything
+mdst.add_mdst_output(
+    path=main, mc=True, filename="pg_reco.root"
+)  # save subset of above
+
+# Print Modules
+# b2.print_path(main)
 
 # Process the steering path
 b2.process(path=main)
 
 # Print out statistics about the modules execution
 print(b2.statistics)
-
-# Print Modules
-b2.print_path(main)
