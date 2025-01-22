@@ -67,3 +67,5 @@ venv*
 develop
 papers
 talks
+html
+results

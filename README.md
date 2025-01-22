@@ -2,7 +2,7 @@
 
 Playground for Belle II Tracking.
 
-## Belle II Simulation
+## Belle II Workflow
 
 There are three steps:
 
@@ -27,3 +27,24 @@ export LD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu:$LD_LIBRARY_PATH
 - improve the SVD to CDC CKF in terms of efficiency and purity
 - investigate how to improve the SVD to CDC CKF so that one can recover inefficiencies in the CDC track finding, caused by hardware issues in the readout of the CDC.
 - [Tracking GitLab issue #227](https://gitlab.desy.de/belle2/software/tracking/issues/-/issues/227)
+
+### Development Workflow
+
+```shell
+# create feature branch from main
+git branch -b feature/227-improve-svd-to-cdc-ckf
+
+# setup upstream
+git push --set-upstream origin feature/227-improve-svd-to-cdc-ckf
+
+# switch to your branch
+git checkout feature/227-improve-svd-to-cdc-ckf
+
+# rebase with main
+git fetch --all && git merge origin/main
+
+# push to remote
+git push
+```
+
+
