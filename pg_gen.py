@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
-# Run Script: `basf2 pg_sim.py > pg_sim.log 2>&1`          # OR
-# Run Script: `basf2 pg_sim.py 2>&1 | tee pg_sim.log`
+# Run Script: basf2 pg_gen.py > pg_gen.log 2>&1          # OR
+# Run Script: basf2 pg_gen.py 2>&1 | tee pg_gen.log
 
 
 import basf2 as b2
@@ -27,9 +27,14 @@ set_log_level(LogLevel.WARNING)
 # Random seed for particle generation
 set_random_seed(123)
 
+# Common PDG Codes
+# e- (11) e+ (-11), mu-(13), mu+(-13)
+# pi-(-211), pi+(211)
+# p (2212), pbar (-2212), n (2112), nbar (-2112)
+
 # ParticleGun generator
 pg_gun = b2.register_module("ParticleGun")
-pg_gun.param("pdgCodes", [-11, 11])
+pg_gun.param("pdgCodes", [-13, 13])
 pg_gun.param("nTracks", 10)
 pg_gun.param("varyNTracks", False)
 pg_gun.param("momentumGeneration", "uniform")
@@ -51,7 +56,7 @@ print_params(pg_gun)
 
 # Create Event information
 eventinfosetter = register_module("EventInfoSetter")
-eventinfosetter.param({"evtNumList": [10], "runList": [1]})
+eventinfosetter.param({"evtNumList": [100], "runList": [1]})
 
 # Show progress of processing
 progress = register_module("Progress")
@@ -83,7 +88,7 @@ main.add_module(mcparticleprinter)
 main.add_module(output)
 
 # Print Modules
-# b2.print_path(main)
+b2.print_path(main)
 
 # Process the steering path
 b2.process(path=main)

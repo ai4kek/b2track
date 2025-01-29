@@ -2,7 +2,7 @@
 
 Playground for Belle II Tracking.
 
-## Belle II Workflow
+## _`basf2` Workflow_
 
 There are three steps:
 
@@ -15,20 +15,8 @@ There are two ways to create a steering file: direct, and indirect.
 - _Direct: `main = basf2.Path`, `main.add_module()` or `basf2.some_module (path=main)`, `basf2.Process()`, etc._
 - _Indirect: `module = basf2.register_module("Moduel Name")`, `module.Param("Param Name", "Values")`, `main = basf2.create_path()`, `main.add_module(module)`, `basf2.Process()`, etc._
 
-## Belle II Display
 
-```bash
-# fix for evtdisplay
-export LD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu:$LD_LIBRARY_PATH
-```
-
-## Service Task
-
-- improve the SVD to CDC CKF in terms of efficiency and purity
-- investigate how to improve the SVD to CDC CKF so that one can recover inefficiencies in the CDC track finding, caused by hardware issues in the readout of the CDC.
-- [Tracking GitLab issue #227](https://gitlab.desy.de/belle2/software/tracking/issues/-/issues/227)
-
-### Development Workflow
+### _`basf2` Development_
 
 ```shell
 # create feature branch from main
@@ -47,4 +35,15 @@ git fetch --all && git merge origin/main
 git push
 ```
 
+## _`b2display` Path Settings_
 
+```bash
+# fix for evtdisplay
+export LD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu:$LD_LIBRARY_PATH
+```
+
+## _Service Task_
+
+- improve the SVD to CDC CKF in terms of efficiency and purity
+- investigate how to improve the SVD to CDC CKF so that one can recover inefficiencies in the CDC track finding, caused by hardware issues in the readout of the CDC.
+- [Tracking GitLab issue #227](https://gitlab.desy.de/belle2/software/tracking/issues/-/issues/227)

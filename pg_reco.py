@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
-# Run Script: `basf2 pg_reco.py > pg_reco.log 2>&1`        # OR
-# Run Script: `basf2 pg_reco.py 2>&1 | tee pg_reco.log`
+# Run Script: basf2 pg_reco.py > pg_reco.log 2>&1        # OR
+# Run Script: basf2 pg_reco.py 2>&1 | tee pg_reco.log
 
 
 import basf2 as b2
@@ -27,7 +27,7 @@ mdst.add_mdst_output(
 )  # save subset of above
 
 # Print Modules
-# b2.print_path(main)
+b2.print_path(main)
 
 # Process the steering path
 b2.process(path=main)
