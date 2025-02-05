@@ -26,7 +26,43 @@ from basf2 import Module, Path, process, B2INFO, B2WARNING
 from simulation import add_simulation
 
 
-def plot(x, y, col, show=0):
+def SVDPlot(x, y, col, show=0):
+    """
+    Plot a list of x/y values, plus CDC superlayer boundaries.
+
+    Returns a pyplot.figure that can be saved.
+    """
+    fig = plt.figure(figsize=(8, 8))
+    ax = fig.add_subplot(111)
+    
+    # SVD Layout
+    layers = [3.9, 8.0, 10.4, 13.5]
+    Circs = [Circle((0, 0), a, facecolor='none', edgecolor='lightgrey')
+             for a in layers]
+    for e in Circs:
+        ax.add_artist(e)
+        
+    # Draw the x/y arrays. Note that looping over the hits
+    # and drawing them individually would be much slower.
+    for i in range(len(col)):
+        ax.plot(x[i], y[i], marker='.', color=col[i], linestyle='None', markersize=1)
+            
+    # Axis Params
+    ax.set_title('SVDSimHits')
+    ax.set_xlabel("x [cm]", fontsize=15)
+    ax.set_ylabel("y [cm]", fontsize=15)
+    ax.set_xlim(-14, 14)
+    ax.set_ylim(-14, 14)
+    ax.set_aspect('equal')
+    ax.grid(False)
+    
+    # Fig Params
+    fig.tight_layout()
+    if show:
+        plt.show()
+    return fig
+
+def CDCPlot(x, y, col, show=0):
     """
     Plot a list of x/y values, plus CDC superlayer boundaries.
 
@@ -43,7 +79,7 @@ def plot(x, y, col, show=0):
     ax.set_title('CDCSimHits')
     ax.set_xlabel('x [cm]')
     ax.set_ylabel('y [cm]')
-    ax.axis('scaled')
+    ax.axis('scaled')  # equal scaling and auto-adjusts
 
     # draw CDC superlayer boundaries
     layers = [16.8, 25.7, 36.5, 47.6, 58.4, 69.5, 80.2, 91.3, 102.0, 111.1]
@@ -52,13 +88,13 @@ def plot(x, y, col, show=0):
     for e in Circs:
         ax.add_artist(e)
 
-    ax.set_xlim(-130, 130)
-    ax.set_ylim(-130, 130)
+    ax.set_xlim(-115, 115)
+    ax.set_ylim(-115, 115)
     fig.tight_layout()
     if show:
         plt.show()
     return fig
-
+    
 class SVDPlotModule(b2.Module):
     """An example python module.
 
@@ -91,7 +127,7 @@ class SVDPlotModule(b2.Module):
                 trackhits_y.append([])
             # add simhit to the list corresponding to this particle
             idx = mcparts.index(mcpart)
-            hitpos = hit.getPosIn()              # why? What about getPosOut()?
+            hitpos = hit.getPosIn()  # TVector3            
             trackhits_x[idx].append(hitpos.X())
             trackhits_y[idx].append(hitpos.Y())
 
@@ -99,7 +135,7 @@ class SVDPlotModule(b2.Module):
         if npart > 0:
             # plot the (x,y) list on a matplotlib figure
             col = [colormap.jet(1.0 * c / (npart - 1)) for c in range(npart)]
-            fig = plot(trackhits_x, trackhits_y, col)
+            fig = SVDPlot(trackhits_x, trackhits_y, col)
 
             filename = f'svdhits_{self.num_events}.png'
             if os.path.lexists(filename):
@@ -152,11 +188,11 @@ class CDCPlotModule(b2.Module):
         if npart > 0:
             # plot the (x,y) list on a matplotlib figure
             col = [colormap.jet(1.0 * c / (npart - 1)) for c in range(npart)]
-            fig = plot(trackhits_x, trackhits_y, col)
+            fig = CDCPlot(trackhits_x, trackhits_y, col)
 
             filename = f'cdchits_{self.num_events}.png'
             if os.path.lexists(filename):
-                B2WARNING(filename + ' exists, overwriting ...')
+                b2.B2WARNING(filename + ' exists, overwriting ...')
             else:
                 b2.B2INFO('creating ' + filename + ' ...')
             fig.savefig(filename)
@@ -194,5 +230,6 @@ main.add_module('ParticleGun', **param_pGun)
 add_simulation(main)
 
 main.add_module(SVDPlotModule())
+main.add_module(CDCPlotModule())
 
 b2.process(main)
