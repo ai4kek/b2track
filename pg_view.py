@@ -16,10 +16,12 @@
 ###############################################################################
 
 import os
+import basf2 as b2
 from ROOT import Belle2
+import matplotlib.pyplot as plt
 import matplotlib.cm as colormap
 from matplotlib.patches import Circle
-import matplotlib.pyplot as plt
+
 from basf2 import Module, Path, process, B2INFO, B2WARNING
 from simulation import add_simulation
 
@@ -57,8 +59,62 @@ def plot(x, y, col, show=0):
         plt.show()
     return fig
 
+class SVDPlotModule(b2.Module):
+    """An example python module.
 
-class CDCPlotModule(Module):
+    It gathers the x/y position off all SVDSimHits and draws them using
+    matplotlib. The result is saved as a PNG.
+    """
+
+    #: event counter
+    num_events = 0
+
+    def event(self):
+        """reimplementation of Module::event().
+
+        loops over the SVDSimHits in the current event.
+        """
+        svdSimHits = Belle2.PyStoreArray('SVDSimHits')
+
+        # list of lists of simhit positions, one list per mcpart
+        trackhits_x = []
+        trackhits_y = []
+
+        mcparts = []
+        for hit in svdSimHits:
+            mcpart = hit.getRelatedFrom("MCParticles")
+            if not mcpart:
+                continue
+            if mcpart not in mcparts:
+                mcparts.append(mcpart)
+                trackhits_x.append([])
+                trackhits_y.append([])
+            # add simhit to the list corresponding to this particle
+            idx = mcparts.index(mcpart)
+            hitpos = hit.getPosIn()              # why? What about getPosOut()?
+            trackhits_x[idx].append(hitpos.X())
+            trackhits_y[idx].append(hitpos.Y())
+
+        npart = len(mcparts)
+        if npart > 0:
+            # plot the (x,y) list on a matplotlib figure
+            col = [colormap.jet(1.0 * c / (npart - 1)) for c in range(npart)]
+            fig = plot(trackhits_x, trackhits_y, col)
+
+            filename = f'svdhits_{self.num_events}.png'
+            if os.path.lexists(filename):
+                b2.B2WARNING(filename + ' exists, overwriting ...')
+            else:
+                b2.B2INFO('creating ' + filename + ' ...')
+            fig.savefig(filename)
+
+        self.num_events += 1
+
+    def terminate(self):
+        """reimplementation of Module::terminate()."""
+        b2.B2INFO('terminating SVDPlotModule')
+        
+class CDCPlotModule(b2.Module):
     """An example python module.
 
     It gathers the x/y position off all CDCSimHits and draws them using
@@ -73,14 +129,14 @@ class CDCPlotModule(Module):
 
         loops over the CDCSimHits in the current event.
         """
-        simhits = Belle2.PyStoreArray('CDCSimHits')
+        cdcSimHits = Belle2.PyStoreArray('CDCSimHits')
 
         # list of lists of simhit positions, one list per mcpart
         trackhits_x = []
         trackhits_y = []
 
         mcparts = []
-        for hit in simhits:
+        for hit in cdcSimHits:
             mcpart = hit.getRelatedFrom("MCParticles")
             if mcpart not in mcparts:
                 mcparts.append(mcpart)
@@ -102,22 +158,22 @@ class CDCPlotModule(Module):
             if os.path.lexists(filename):
                 B2WARNING(filename + ' exists, overwriting ...')
             else:
-                B2INFO('creating ' + filename + ' ...')
+                b2.B2INFO('creating ' + filename + ' ...')
             fig.savefig(filename)
 
         self.num_events += 1
 
     def terminate(self):
         """reimplementation of Module::terminate()."""
-        B2INFO('terminating CDCPlotModule')
+        b2.B2INFO('terminating CDCPlotModule')
 
 
 # Normal steering file part begins here
 
 # choose the particles you want to simulate
 param_pGun = {
-    'pdgCodes': [211, -211],
-    'nTracks': 4,
+    'pdgCodes': [13, -13],
+    'nTracks': 6,
     'varyNTracks': 0,
     'momentumGeneration': 'uniform',
     'momentumParams': [0.4, 1.6],
@@ -132,10 +188,11 @@ param_pGun = {
 }
 
 # Create main path
-main = Path()
+main = b2.Path()
 main.add_module('EventInfoSetter', evtNumList=[5])
 main.add_module('ParticleGun', **param_pGun)
 add_simulation(main)
-main.add_module(CDCPlotModule())
 
-process(main)
+main.add_module(SVDPlotModule())
+
+b2.process(main)
