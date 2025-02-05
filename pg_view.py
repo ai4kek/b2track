@@ -109,6 +109,7 @@ class SVDPlotModule(b2.Module):
         loops over the SVDSimHits in the current event.
         """
         svdSimHits = Belle2.PyStoreArray("SVDSimHits")
+        geoCache = Belle2.VXD.GeoCache.getInstance()
 
         # list of lists of simhit positions, one list per mcpart
         trackhits_x = []
@@ -126,9 +127,8 @@ class SVDPlotModule(b2.Module):
             # add simhit to the list corresponding to this particle
             idx = mcparts.index(mcpart)
             hitpos = hit.getPosIn()  # TVector3
-
-            # TODO: hitpos are in local coordinates, convert to global
-
+            info = geoCache.getSensorInfo(hit.getSensorID())
+            hitpos = info.pointToGlobal(hit.getPosIn())
             trackhits_x[idx].append(hitpos.X())
             trackhits_y[idx].append(hitpos.Y())
 
@@ -208,7 +208,7 @@ class CDCPlotModule(b2.Module):
 
 # Normal steering file part begins here
 
-# choose the particles you want to simulate
+# Particle Gun
 param_pGun = {
     "pdgCodes": [13, -13],
     "nTracks": 6,
@@ -227,10 +227,16 @@ param_pGun = {
 
 # Create main path
 main = b2.Path()
-main.add_module("EventInfoSetter", evtNumList=[5], runList=[1])
-main.add_module("ParticleGun", **param_pGun)
-si.add_simulation(main)
 
+# PG with Simulation
+# main.add_module("EventInfoSetter", evtNumList=[5], runList=[1])
+# main.add_module("ParticleGun", **param_pGun)
+# si.add_simulation(main)
+
+# Already PG and Simulated
+main.add_module("RootInput", inputFileName="pg_sim.root")
+main.add_module("Gearbox")
+main.add_module("Geometry")
 main.add_module(SVDPlotModule())
 main.add_module(CDCPlotModule())
 
