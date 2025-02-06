@@ -47,3 +47,65 @@ export LD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu:$LD_LIBRARY_PATH
 - improve the SVD to CDC CKF in terms of efficiency and purity
 - investigate how to improve the SVD to CDC CKF so that one can recover inefficiencies in the CDC track finding, caused by hardware issues in the readout of the CDC.
 - [Tracking GitLab issue #227](https://gitlab.desy.de/belle2/software/tracking/issues/-/issues/227)
+
+
+## _`basf2` Reconstruction Flow_
+
+### _1. Real Reconstruction_
+
+```shell
+# Top-level Reconstruction Function and Calls
+| add_reconstruction()
+| │
+| ├── add_prefilter_reconstruction()
+| │ ├── add_prefilter_pretracking_reconstruction()   : Clustering
+| │ ├── add_prefilter_tracking_reconstruction()      : Tracking essential for HLT filter calculation
+| │ └── add_prefilter_posttracking_reconstruction()  : PID and clustering essential for HLT
+| │ 
+| └── add_postfilter_reconstruction()
+|   ├── add_postfilter_tracking_reconstruction()     : Rest of the tracking
+|   └── add_postfilter_posttracking_reconstruction() : Rest of PID and clustering
+```
+
+### _2. MC Reconstruction_
+
+```shell
+# Top-level MC Reconstruction Function and Calls
+| add_mc_reconstruction()
+| ├── add_prefilter_pretracking_reconstruction()
+| ├── add_mc_tracking_reconstruction()
+| └── add_posttracking_reconstruction()
+```
+
+### _3. Cosmic Reconstruction_
+
+```shell
+# Top-level Cosmic Reconstruction Function and Calls
+| add_cosmics_reconstruction()
+| ├── add_prefilter_pretracking_reconstruction()
+| ├── add_cr_tracking_reconstruction()
+| └── add_posttracking_reconstruction()
+```
+
+## _`basf2` Track Reconstruction Flow_
+
+Main tracking functions as part of reconstruction task comes from the top-level `path/to/basf2/tracking/` module of the `basf2`:
+
+```shell
+# Tracking Functions
+| add_tracking_reconstruction()     # Real Tracking
+| │
+| ├── add_prefilter_tracking_reconstruction()
+| │   │
+| │   ├── add_track_finding()
+| │   │   ├── add_cdc_track_finding()
+| │   │   ├── add_svd_track_finding()                   # use_svd_to_cdc_ckf: SVD to CDC CKF ("ToCDCCKF")
+| │   │   ├── add_pxd_track_finding()
+| │   │   └── add_eclcdc_track_finding()                # use_ecl_to_cdc_ckf: ECL to CDC CKF (???) 
+| │   ├── add_mc_track_finding()
+| │   │
+| ├── add_postfilter_tracking_reconstruction()
+| │
+| add_mc_tracking_reconstruction()  # MC Tracking
+| add_cr_tracking_reconstruction()  # Cosmic Tracking
+```
