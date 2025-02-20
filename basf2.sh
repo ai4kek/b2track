@@ -1,5 +1,10 @@
 #!/bin/bash
 
+olddir="$(pwd)"
+source /export/home/adeel/belle2/tools/b2setup
+source /export/home/adeel/belle2/develop/b2setup
+cd $olddir
+
 # setup a basf2 release on KEKCC/NAF
 # source /cvmfs/belle.cern.ch/tools/b2setup release-08-02-04
 

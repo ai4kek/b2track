@@ -58,13 +58,15 @@ export LD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu:$LD_LIBRARY_PATH
 | add_reconstruction()
 | │
 | ├── add_prefilter_reconstruction()
-| │ ├── add_prefilter_pretracking_reconstruction()   : Clustering
-| │ ├── add_prefilter_tracking_reconstruction()      : Tracking essential for HLT filter calculation
-| │ └── add_prefilter_posttracking_reconstruction()  : PID and clustering essential for HLT
+| │ ├── add_prefilter_pretracking_reconstruction()   # Clustering
+| │ ├── add_prefilter_tracking_reconstruction()      # Tracking essential for HLT filter calculation
+| │ └── add_prefilter_posttracking_reconstruction()  # PID and clustering essential for HLT
 | │ 
-| └── add_postfilter_reconstruction()
-|   ├── add_postfilter_tracking_reconstruction()     : Rest of the tracking
-|   └── add_postfilter_posttracking_reconstruction() : Rest of PID and clustering
+| ├── add_postfilter_reconstruction()
+| │ ├── add_postfilter_tracking_reconstruction()     # Rest of the tracking
+| │ └── add_postfilter_posttracking_reconstruction() # Rest of PID and clustering
+| │
+| └── plus the modules to calculate the software trigger cuts.
 ```
 
 ### _2. MC Reconstruction_
@@ -99,13 +101,61 @@ Main tracking functions as part of reconstruction task comes from the top-level 
 | │   │
 | │   ├── add_track_finding()
 | │   │   ├── add_cdc_track_finding()
-| │   │   ├── add_svd_track_finding()                   # use_svd_to_cdc_ckf: SVD to CDC CKF ("ToCDCCKF")
+| │   │   ├── add_svd_track_finding()     # use_svd_to_cdc_ckf: SVD to CDC CKF ("ToCDCCKF")
 | │   │   ├── add_pxd_track_finding()
-| │   │   └── add_eclcdc_track_finding()                # use_ecl_to_cdc_ckf: ECL to CDC CKF (???) 
+| │   │   └── add_eclcdc_track_finding()  # use_ecl_to_cdc_ckf: ECL to CDC CKF ("T0CDCCKF") 
 | │   ├── add_mc_track_finding()
 | │   │
 | ├── add_postfilter_tracking_reconstruction()
 | │
 | add_mc_tracking_reconstruction()  # MC Tracking
 | add_cr_tracking_reconstruction()  # Cosmic Tracking
+```
+
+The difference between `add_reconstruction()` and `add_tracking_reconstruction()` is only additional modules to calculate the software trigger cuts which are added in the `add_reconstruction()`. So for track reconstruction only, one can simply use `add_tracking_reconstruction()`. For example,
+
+```shell
+# steering file
+import sys
+import basf2 as b2
+from tracking import add_tracking_reconstruction
+
+path = b2.create_path()
+
+root_input = b2.register_module('RootInput')
+root_input.param('inputFileNames', input_root_files)
+path.add_module(root_input)
+
+gearbox = b2.register_module('Gearbox')
+path.add_module(gearbox)
+
+geometry = b2.register_module('Geometry')
+path.add_module(geometry)
+
+add_tracking_reconstruction(
+    path,
+    components=None,
+    pruneTracks=False,
+    mcTrackFinding=False,       # set mcTrackFinding
+    skipGeometryAdding=False
+)
+
+modList = path.modules()
+for modItem in modList:
+    if modItem.name() == 'V0Finder':
+        modItem.param('Validation', True)
+
+
+v0matcher = b2.register_module('MCV0Matcher')
+v0matcher.param('V0ColName', 'V0ValidationVertexs')
+v0matcher.logging.log_level = b2.LogLevel.INFO
+path.add_module(v0matcher)
+
+path.add_module('Progress')
+
+root_output = b2.register_module('RootOutput')
+root_output.param('outputFileName', output_file_name)
+path.add_module(root_output)
+
+b2.process(path)
 ```
