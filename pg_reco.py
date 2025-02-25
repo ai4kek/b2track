@@ -14,17 +14,21 @@ import mdst
 # Create the steering path
 main = b2.create_path()
 
-# add simulated data (ParticleGun)
+# Add simulated data (RootInput)
 main.add_module("RootInput", inputFileName="pg_sim.root")
 
 # Reconstruct the objects
 re.add_reconstruction(path=main)
 
 # Create the mDST output file
-# main.add_module("RootOutput", outputFileName="pg_reco.root")  # save everything
+outFile = "pg_reco.root"
 mdst.add_mdst_output(
-    path=main, mc=True, filename="pg_reco.root"
-)  # save subset of above
+    path=main, mc=True, filename=outFile
+)  # save only branches defined in mdst.add_mdst_output()
+
+# OR, directly add to RootOutput
+# main.add_module("RootOutput", outputFileName=outFile)  # saves all branches
+# main.add_module("RootOutput", branchNames=branches, outputFileName=outFile) # save selected branches
 
 # Print Modules
 b2.print_path(main)
