@@ -18,7 +18,7 @@ import cdc
 import mdst
 
 
-class PerfModule(b2.Module):
+class PerfFoM(b2.Module):
     """Performance module to extract FoM."""
 
     def __init__(self):
@@ -68,16 +68,21 @@ class PerfModule(b2.Module):
         b2.B2INFO("terminate()")
 
 
+##########################################################################
+
 # Create the steering path
-main = b2.create_path()
+main = b2.Path()
+
+# FIXME: Set debug_level to 20-29 (To debug CKFToCDCFindlet)
+# b2.set_log_level(level=29)
 
 # Add simulated data (RootInput)
 main.add_module("RootInput", inputFileName="pg_sim.root")
 
-# Only SVD Reconstruction
+# Add SVD Reconstruction
 # svd.add_svd_reconstruction(main)
 
-# Only CDC Reconstruction
+# Add CDC Reconstruction
 # cdc.add_cdc_reconstruction(main)
 
 # Add full reconstruction
@@ -92,13 +97,13 @@ trkx.add_tracking_reconstruction(
     skipGeometryAdding=False,
 )
 
-# FoM/Performance Metrics (Tracking Efficiency, Tracking Purity)
-# TODO: Add module to print efficiency and purity metrics as plots
-# main.add_module(PerfModule())
+# TODO: Add module to print FoM (tracking efficiency & purity) as plots.
+# main.add_module(PerfFoM())
 
 # Create the mDST output file
 additional_br = []
-outFile = "pg_track.root"
+outFile = "mdst_track.root"
+
 mdst.add_mdst_output(
     path=main,
     mc=True,
@@ -107,12 +112,13 @@ mdst.add_mdst_output(
     dataDescription=None,
 )
 
-# Modules and Paths
-b2.print_params(
-    "ToCDCCKR", print_values=True, shared_lib_path=None
-)  # print module parameters
-b2.print_path(
-    main, defaults=False, description=False, indentation=0, title=True
-)  # prints modules in the given path
+# Print module parameters
+for module in main.modules():
+    if module.name() == "ToCDCCKF":
+        b2.print_params(module, print_values=True, shared_lib_path=None)
+
+# Print modules in the given path
+b2.print_path(main, defaults=False, description=False, indentation=0, title=True)
+
 b2.process(main)
-print(b2.statistics)
+# print(b2.statistics)

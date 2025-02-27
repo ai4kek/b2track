@@ -21,14 +21,10 @@ main.add_module("RootInput", inputFileName="pg_sim.root")
 re.add_reconstruction(path=main)
 
 # Create the mDST output file
-outFile = "pg_reco.root"
+outFile = "mdst_reco.root"
 mdst.add_mdst_output(
     path=main, mc=True, filename=outFile
 )  # save only branches defined in mdst.add_mdst_output()
-
-# OR, directly add to RootOutput
-# main.add_module("RootOutput", outputFileName=outFile)  # saves all branches
-# main.add_module("RootOutput", branchNames=branches, outputFileName=outFile) # save selected branches
 
 # Print Modules
 b2.print_path(main)

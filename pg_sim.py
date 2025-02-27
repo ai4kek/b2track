@@ -85,7 +85,7 @@ si.add_simulation(path=main)
 
 # Create the mDST output file
 main.add_module("RootOutput", outputFileName="pg_sim.root")  # save everything
-# mdst.add_mdst_output(path=main, filename="pg_sim.root")  # save subset of above
+# mdst.add_mdst_output(path=main, filename="mdst_sim.root")  # save subset of above
 
 # Print Modules
 # b2.print_path(main)
