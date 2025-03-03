@@ -63,9 +63,10 @@ __pycache__
 .ipynb_checkpoints
 .virtual_documents
 
+Talks
+Papers
+
 venv*
 develop
-papers
-talks
 html
 results

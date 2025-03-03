@@ -11,17 +11,17 @@
 ###############################################################################
 # A more complex python module using matlotlib to create
 # advanced plots.
-# It gathers the x/y position off all CDCSimHits and draws them in different
+# It gathers the x/y position off all SVDSimHits and draws them in different
 # colours depending on associated MCParticle.
 ###############################################################################
 
 import os
+import basf2 as b2
 from ROOT import Belle2
+import simulation as si
+import matplotlib.pyplot as plt
 import matplotlib.cm as colormap
 from matplotlib.patches import Circle
-import matplotlib.pyplot as plt
-from basf2 import Module, Path, process, B2INFO, B2WARNING
-from simulation import add_simulation
 
 
 def plot(x, y, col, show=0):
@@ -36,12 +36,12 @@ def plot(x, y, col, show=0):
     # draw the x/y arrays. note that looping over the hits and
     # drawing them individually would be much slower
     for i in range(len(col)):
-        ax.plot(x[i], y[i], marker='.', color=col[i], linestyle='None', markersize=5)
+        ax.plot(x[i], y[i], marker=".", color=col[i], linestyle="None", markersize=5)
 
-    ax.set_title('SVDSimHits')
-    ax.set_xlabel('x [cm]')
-    ax.set_ylabel('y [cm]')
-    ax.axis('scaled')
+    ax.set_title("SVDSimHits")
+    ax.set_xlabel("x [cm]")
+    ax.set_ylabel("y [cm]")
+    ax.axis("scaled")
 
     ax.set_xlim(-15, 15)
     ax.set_ylim(-15, 15)
@@ -51,30 +51,37 @@ def plot(x, y, col, show=0):
     return fig
 
 
-class SVDPlotModule(Module):
+class SVDPlotModule(b2.Module):
     """An example python module.
 
     It gathers the x/y position off all SVDSimHits and draws them using
     matplotlib. The result is saved as a PNG.
     """
 
-    #: event counter
-    num_events = 0
+    def initialize(self):
+        """reimplementation of Module::initialize()
+
+        Create a member to access SVDSimHits StoreArray
+        """
+
+        self.svdSimHits = Belle2.PyStoreArray("SVDSimHits")
+        self.geoCache = Belle2.VXD.GeoCache.getInstance()
+        self.num_events = 0
 
     def event(self):
         """reimplementation of Module::event().
 
-        loops over the SVDSimHits in the current event.
+        Loops over the SVDSimHits in the current event.
         """
-        simhits = Belle2.PyStoreArray('SVDSimHits')
-        geoCache = Belle2.VXD.GeoCache.getInstance()
+        # svdSimHits = Belle2.PyStoreArray("SVDSimHits")
+        # geoCache = Belle2.VXD.GeoCache.getInstance()
 
         # list of lists of simhit positions, one list per mcpart
         trackhits_x = []
         trackhits_y = []
 
         mcparts = []
-        for hit in simhits:
+        for hit in self.svdSimHits:
             mcpart = hit.getRelatedFrom("MCParticles")
             if not mcpart:
                 continue
@@ -85,7 +92,7 @@ class SVDPlotModule(Module):
             # add simhit to the list corresponding to this particle
             idx = mcparts.index(mcpart)
             hitpos = hit.getPosIn()  # TVector3
-            info = geoCache.getSensorInfo(hit.getSensorID())
+            info = self.geoCache.getSensorInfo(hit.getSensorID())
             hitpos = info.pointToGlobal(hit.getPosIn())
             trackhits_x[idx].append(hitpos.X())
             trackhits_y[idx].append(hitpos.Y())
@@ -96,44 +103,45 @@ class SVDPlotModule(Module):
             col = [colormap.jet(1.0 * c / (npart - 1)) for c in range(npart)]
             fig = plot(trackhits_x, trackhits_y, col)
 
-            filename = f'svdhits_{self.num_events}.png'
+            filename = f"svdhits_{self.num_events}.png"
             if os.path.lexists(filename):
-                B2WARNING(filename + ' exists, overwriting ...')
+                b2.B2WARNING(filename + " exists, overwriting ...")
             else:
-                B2INFO('creating ' + filename + ' ...')
+                b2.B2INFO("creating " + filename + " ...")
             fig.savefig(filename)
 
         self.num_events += 1
 
     def terminate(self):
         """reimplementation of Module::terminate()."""
-        B2INFO('terminating SVDPlotModule')
+        b2.B2INFO("terminating SVDPlotModule")
 
 
 # Normal steering file part begins here
 
-# choose the particles you want to simulate
+# Choose the particles you want to simulate
 param_pGun = {
-    'pdgCodes': [211, -211],
-    'nTracks': 4,
-    'varyNTracks': 0,
-    'momentumGeneration': 'uniform',
-    'momentumParams': [0.4, 1.6],
-    'thetaGeneration': 'uniform',
-    'thetaParams': [60., 120.],
-    'phiGeneration': 'uniform',
-    'phiParams': [0, 360],
-    'vertexGeneration': 'uniform',
-    'xVertexParams': [0.0, 0.0],
-    'yVertexParams': [0.0, 0.0],
-    'zVertexParams': [0.0, 0.0],
+    "pdgCodes": [211, -211],
+    "nTracks": 4,
+    "varyNTracks": 0,
+    "momentumGeneration": "uniform",
+    "momentumParams": [0.4, 1.6],
+    "thetaGeneration": "uniform",
+    "thetaParams": [60.0, 120.0],
+    "phiGeneration": "uniform",
+    "phiParams": [0, 360],
+    "vertexGeneration": "uniform",
+    "xVertexParams": [0.0, 0.0],
+    "yVertexParams": [0.0, 0.0],
+    "zVertexParams": [0.0, 0.0],
 }
 
 # Create main path
-main = Path()
-main.add_module('EventInfoSetter', evtNumList=[5])
-main.add_module('ParticleGun', **param_pGun)
-add_simulation(main)
+main = b2.Path()
+main.add_module("EventInfoSetter", evtNumList=[5])
+main.add_module("ParticleGun", **param_pGun)
+si.add_simulation(main)
+
 main.add_module(SVDPlotModule())
 
-process(main)
+b2.process(main)
