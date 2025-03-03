@@ -9,6 +9,7 @@
 ##########################################################################
 
 import basf2 as b2
+from ROOT import Belle2
 import generators as ge
 import simulation as si
 import tracking as trkx
@@ -73,11 +74,11 @@ class PerfFoM(b2.Module):
 # Create the steering path
 main = b2.Path()
 
-# FIXME: Set debug_level to 20-29 (To debug CKFToCDCFindlet)
+# TODO: Set debug_level to 20-29 (To debug CKFToCDCFindlet)
 # b2.set_log_level(level=29)
 
 # Add simulated data (RootInput)
-main.add_module("RootInput", inputFileName="pg_sim.root")
+main.add_module("RootInput", inputFileName="mdst_sim.root")
 
 # Add SVD Reconstruction
 # svd.add_svd_reconstruction(main)
@@ -98,7 +99,23 @@ trkx.add_tracking_reconstruction(
 )
 
 # TODO: Add module to print FoM (tracking efficiency & purity) as plots.
-# main.add_module(PerfFoM())
+main.add_module(PerfFoM())
+
+# TODO (DONE): Print module parameters
+for module in main.modules():
+    if module.name() == "ToCDCCKF":
+        b2.print_params(module, print_values=True, shared_lib_path=None)
+
+# TODO: Change some parameters of the ToCDCCKF (Will use kwargs to give new params)
+params = {
+    "maximalDeltaPhi": 0.39269908169872414,  # Maximal distance in phi between wires for Z=0 plane
+    "maximalLayerJump": 6,  # Maximal jump over N layers
+    "maximalLayerJumpBackwardSeed": 3,  # Maximal jump over N layers
+    "minimalPtRequirement": 0.0,  # Minimal Pt requirement for the input tracks
+}
+
+b2.set_module_parameters(main, name="ToCDCCKF", type=None, recursive=True, **params)
+
 
 # Create the mDST output file
 additional_br = []
@@ -111,11 +128,6 @@ mdst.add_mdst_output(
     additionalBranches=additional_br,
     dataDescription=None,
 )
-
-# Print module parameters
-for module in main.modules():
-    if module.name() == "ToCDCCKF":
-        b2.print_params(module, print_values=True, shared_lib_path=None)
 
 # Print modules in the given path
 b2.print_path(main, defaults=False, description=False, indentation=0, title=True)
