@@ -9,18 +9,19 @@
 ##########################################################################
 
 import basf2 as b2
-from ROOT import Belle2
-import generators as ge
-import simulation as si
-import tracking as trkx
-import reconstruction as re
-import svd
 import cdc
+import generators as ge
 import mdst
+import reconstruction as re
+import simulation as si
+import svd
+import tracking as trkx
+from ROOT import Belle2
 
 
+# Maybe subclassing TrackingPerformanceEvalutionModule works?
 class PerfFoM(b2.Module):
-    """Performance module to extract FoM."""
+    """The basf2 module to extract performance FoM."""
 
     def __init__(self):
         super().__init__()
@@ -98,17 +99,9 @@ trkx.add_tracking_reconstruction(
     skipGeometryAdding=False,
 )
 
-# TODO: Add module to print FoM (tracking efficiency & purity) as plots.
-main.add_module(PerfFoM())
-
-# TODO (DONE): Print module parameters
-for module in main.modules():
-    if module.name() == "ToCDCCKF":
-        b2.print_params(module, print_values=True, shared_lib_path=None)
-
 # TODO: Change some parameters of the ToCDCCKF (Will use kwargs to give new params)
 params = {
-    "maximalDeltaPhi": 0.39269908169872414,  # Maximal distance in phi between wires for Z=0 plane
+    "maximalDeltaPhi": 0.4,  # Maximal distance in phi between wires for Z=0 plane
     "maximalLayerJump": 6,  # Maximal jump over N layers
     "maximalLayerJumpBackwardSeed": 3,  # Maximal jump over N layers
     "minimalPtRequirement": 0.0,  # Minimal Pt requirement for the input tracks
@@ -116,6 +109,14 @@ params = {
 
 b2.set_module_parameters(main, name="ToCDCCKF", type=None, recursive=True, **params)
 
+# TODO (DONE): Print module parameters
+for module in main.modules():
+    if module.name() == "ToCDCCKF":
+        # module.param("maximalLayerJump", 6)  # change a parameter
+        b2.print_params(module, print_values=True, shared_lib_path=None)
+
+# TODO: Add FoM module to get plots
+# main.add_module(PerfFoM())
 
 # Create the mDST output file
 additional_br = []
