@@ -15,6 +15,9 @@
 # colours depending on associated MCParticle.
 ###############################################################################
 
+# flake8: noqa: F401
+# ruff: noqa: F401
+
 import os
 import basf2 as b2
 import simulation as si

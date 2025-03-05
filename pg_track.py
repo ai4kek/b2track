@@ -8,6 +8,9 @@
 # This file is licensed under LGPL-3.0, see LICENSE.md.                  #
 ##########################################################################
 
+# flake8: noqa: F401
+# ruff: noqa: F401
+
 import basf2 as b2
 import cdc
 import generators as ge
@@ -99,7 +102,7 @@ trkx.add_tracking_reconstruction(
     skipGeometryAdding=False,
 )
 
-# TODO: Change some parameters of the ToCDCCKF (Will use kwargs to give new params)
+# TODO (DONE): Change ToCDCCKF parameters
 params = {
     "maximalDeltaPhi": 0.4,  # Maximal distance in phi between wires for Z=0 plane
     "maximalLayerJump": 6,  # Maximal jump over N layers
@@ -116,7 +119,7 @@ for module in main.modules():
         b2.print_params(module, print_values=True, shared_lib_path=None)
 
 # TODO: Add FoM module to get plots
-# main.add_module(PerfFoM())
+main.add_module(PerfFoM())
 
 # Create the mDST output file
 additional_br = []

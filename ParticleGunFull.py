@@ -20,8 +20,8 @@ from basf2 import (
     statistics,
 )
 
-import simulation as si
-import reconstruction as re
+import simulation as si  # noqa
+import reconstruction as re  # noqa
 
 # suppress messages and warnings during processing:
 set_log_level(LogLevel.WARNING)
