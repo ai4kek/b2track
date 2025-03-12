@@ -16,31 +16,25 @@ import mdst
 # Create the steering path
 main = b2.Path()
 
-# Define number of events and experiment number
+# Set EventInfoSetter
 main.add_module("EventInfoSetter", evtNumList=[10], expList=[0], runList=[0])
 
-# Generate signal events (finalstate='signal', signaldecfile=xyz.dec)
+# Generate generic events (finalstate="mixed" (B0B0bar), "charged" (B+B-))
+final_state = "mixed"
 ge.add_evtgen_generator(
-    path=main, finalstate="signal", signaldecfile=b2.find_file("signal_B0_Jpsi_KS0.dec")
+    path=main,
+    finalstate=final_state,
+    signaldecfile=None,
 )
 
+# Add simulation
 si.add_simulation(path=main)
 
+# Save output
+main.add_module("RootOutput", outputFileName=f"{final_state}_sim.root")
 
-# Create the mDST output file
-additional_br = []
-outFile = "mdst_sim.root"
-
-mdst.add_mdst_output(
-    path=main,
-    mc=True,
-    filename=outFile,
-    additionalBranches=additional_br,
-    dataDescription=None,
-)
-
-# Print modules in the given path
-b2.print_path(main, defaults=False, description=False, indentation=0, title=True)
+# Print modules in path
+# b2.print_path(main)
 
 b2.process(main)
-# print(b2.statistics)
+print(b2.statistics)

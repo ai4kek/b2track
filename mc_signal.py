@@ -36,8 +36,11 @@ re.add_reconstruction(path=main)
 # Create the mDST output file
 mdst.add_mdst_output(path=main, filename="mdst_signal_B0_Jpsi_KS0.root")
 
+# Print modules in path
+# b2.print_path(main)
+
 # Process the steering path
 b2.process(path=main)
 
-# Finally, print out some statistics about the modules execution
+# Modules execution statistics
 print(b2.statistics)

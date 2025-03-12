@@ -37,15 +37,13 @@ re.add_reconstruction(path=main)
 # or re.add_reconstruction(main, components) to run the reconstruction of a selection of detectors
 
 # Create the mDST output file
-if final_state == "mixed":
-    output_filename = "mdst_generic_mixed.root"
-else:
-    output_filename = "mdst_generic_charged.root"
+mdst.add_mdst_output(path=main, filename=f"mdst_{final_state}.root")
 
-mdst.add_mdst_output(path=main, filename=output_filename)
+# Print modules in path
+# b2.print_path(main)
 
 # Process the steering path
 b2.process(path=main)
 
-# Finally, print out some statistics about the modules execution
+# Modules execution statistics
 print(b2.statistics)

@@ -24,8 +24,8 @@ main = b2.Path()
 # TODO: Set debug_level to 20-29 (To debug CKFToCDCFindlet)
 # b2.set_log_level(level=29)
 
-# Add simulated data (RootInput)
-main.add_module("RootInput", inputFileName="mdst_sim.root")
+# Add simulated data (RootInput): "mixed", "charged" generic states
+main.add_module("RootInput", inputFileName="mixed_sim.root")
 
 # Add SVD Reconstruction
 # svd.add_svd_reconstruction(main)
@@ -66,8 +66,7 @@ for module in main.modules():
 
 # Create the mDST output file
 additional_br = []
-outFile = "mdst_track.root"
-
+outFile = "mdst_reco.root"
 mdst.add_mdst_output(
     path=main,
     mc=True,
@@ -76,8 +75,8 @@ mdst.add_mdst_output(
     dataDescription=None,
 )
 
-# Print modules in the given path
-b2.print_path(main, defaults=False, description=False, indentation=0, title=True)
+# Print modules in path
+b2.print_path(main)
 
 b2.process(main)
-# print(b2.statistics)
+print(b2.statistics)
