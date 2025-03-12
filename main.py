@@ -8,9 +8,6 @@
 # This file is licensed under LGPL-3.0, see LICENSE.md.                  #
 ##########################################################################
 
-# flake8: noqa: F401
-# ruff: noqa: F401
-
 import basf2 as b2
 import cdc
 import generators as ge

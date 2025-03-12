@@ -1,5 +1,13 @@
 #!/usr/bin/env python3
 
+##########################################################################
+# basf2 (Belle II Analysis Software Framework)                           #
+# Author: The Belle II Collaboration                                     #
+#                                                                        #
+# See git log for contributors and copyright holders.                    #
+# This file is licensed under LGPL-3.0, see LICENSE.md.                  #
+##########################################################################
+
 import basf2 as b2
 import generators as ge
 import simulation as si
@@ -13,7 +21,6 @@ main = b2.Path()
 main.add_module("EventInfoSetter", evtNumList=[10], expList=[0], runList=[0])
 
 # Generate generic events (finalstate="mixed" (B0B0bar), "charged" (B+B-))
-
 final_state = "mixed"
 ge.add_evtgen_generator(
     path=main,

@@ -8,68 +8,28 @@
 # This file is licensed under LGPL-3.0, see LICENSE.md.                  #
 ##########################################################################
 
-# flake8: noqa: F401
-# ruff: noqa: F401
-
 import basf2 as b2
-import cdc
 import generators as ge
-import mdst
-import reconstruction as re
 import simulation as si
-import svd
-import tracking as trkx
-from ROOT import Belle2
+import mdst
 
 # Create the steering path
 main = b2.Path()
 
-# TODO: Set debug_level to 20-29 (To debug CKFToCDCFindlet)
-# b2.set_log_level(level=29)
+# Define number of events and experiment number
+main.add_module("EventInfoSetter", evtNumList=[10], expList=[0], runList=[0])
 
-# Add simulated data (RootInput)
-main.add_module("RootInput", inputFileName="mdst_sim.root")
-
-# Add SVD Reconstruction
-# svd.add_svd_reconstruction(main)
-
-# Add CDC Reconstruction
-# cdc.add_cdc_reconstruction(main)
-
-# Add full reconstruction
-# re.add_reconstruction(path=main)
-
-# Add full tracking reconstuction
-trkx.add_tracking_reconstruction(
-    path=main,
-    components=None,
-    pruneTracks=False,
-    mcTrackFinding=False,
-    skipGeometryAdding=False,
+# Generate signal events (finalstate='signal', signaldecfile=xyz.dec)
+ge.add_evtgen_generator(
+    path=main, finalstate="signal", signaldecfile=b2.find_file("signal_B0_Jpsi_KS0.dec")
 )
 
-# TODO: Add SVD, ToCDCCKF
+si.add_simulation(path=main)
 
-
-# TODO (DONE): Change ToCDCCKF parameters
-params = {
-    "maximalDeltaPhi": 0.4,  # Maximal distance in phi between wires for Z=0 plane
-    "maximalLayerJump": 6,  # Maximal jump over N layers
-    "maximalLayerJumpBackwardSeed": 3,  # Maximal jump over N layers
-    "minimalPtRequirement": 0.0,  # Minimal Pt requirement for the input tracks
-}
-
-b2.set_module_parameters(main, name="ToCDCCKF", type=None, recursive=True, **params)
-
-# TODO (DONE): Print module parameters
-for module in main.modules():
-    if module.name() == "ToCDCCKF":
-        # module.param("maximalLayerJump", 6)  # change a parameter
-        b2.print_params(module, print_values=True, shared_lib_path=None)
 
 # Create the mDST output file
 additional_br = []
-outFile = "mdst_track.root"
+outFile = "mdst_sim.root"
 
 mdst.add_mdst_output(
     path=main,
