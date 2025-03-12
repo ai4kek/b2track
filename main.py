@@ -39,7 +39,7 @@ main.add_module("RootInput", inputFileName="mdst_sim.root")
 # Add full reconstruction
 # re.add_reconstruction(path=main)
 
-# Add tracking reconstuction
+# Add full tracking reconstuction
 trkx.add_tracking_reconstruction(
     path=main,
     components=None,
@@ -47,6 +47,9 @@ trkx.add_tracking_reconstruction(
     mcTrackFinding=False,
     skipGeometryAdding=False,
 )
+
+# TODO: Add SVD, ToCDCCKF
+
 
 # TODO (DONE): Change ToCDCCKF parameters
 params = {

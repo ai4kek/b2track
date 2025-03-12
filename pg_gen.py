@@ -58,7 +58,7 @@ print_params(pg_gun)
 
 # Create Event information
 eventinfosetter = register_module("EventInfoSetter")
-eventinfosetter.param({"evtNumList": [100], "runList": [1]})
+eventinfosetter.param({"evtNumList": [100], "expList": [0], "runList": [0]})
 
 # Show progress of processing
 progress = register_module("Progress")

@@ -10,7 +10,7 @@ import mdst
 main = b2.Path()
 
 # Define number of events and experiment number
-main.add_module("EventInfoSetter", evtNumList=[10], expList=[0])
+main.add_module("EventInfoSetter", evtNumList=[10], expList=[0], runList=[0])
 
 # Generate signal events (finalstate='signal', signaldecfile=xyz.dec)
 ge.add_evtgen_generator(
@@ -26,7 +26,7 @@ re.add_reconstruction(path=main)
 # or re.add_reconstruction(main, components) to run the reconstruction of a selection of detectors
 
 # Create the mDST output file
-mdst.add_mdst_output(path=main, filename="mc_signal_B0_Jpsi_KS0.root")
+mdst.add_mdst_output(path=main, filename="mdst_signal_B0_Jpsi_KS0.root")
 
 # Process the steering path
 b2.process(path=main)

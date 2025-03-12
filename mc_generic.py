@@ -10,7 +10,7 @@ import mdst
 main = b2.Path()
 
 # Define number of events and experiment number
-main.add_module("EventInfoSetter", evtNumList=[10], expList=[0])
+main.add_module("EventInfoSetter", evtNumList=[10], expList=[0], runList=[0])
 
 # Generate generic events (finalstate="mixed" (B0B0bar), "charged" (B+B-))
 
@@ -31,9 +31,9 @@ re.add_reconstruction(path=main)
 
 # Create the mDST output file
 if final_state == "mixed":
-    output_filename = "mc_generic_mixed.root"
+    output_filename = "mdst_generic_mixed.root"
 else:
-    output_filename = "mc_generic_charged.root"
+    output_filename = "mdst_generic_charged.root"
 
 mdst.add_mdst_output(path=main, filename=output_filename)
 
