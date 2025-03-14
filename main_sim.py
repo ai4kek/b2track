@@ -8,27 +8,50 @@
 # This file is licensed under LGPL-3.0, see LICENSE.md.                  #
 ##########################################################################
 
+import background as bkg
 import basf2 as b2
 import generators as ge
-import simulation as si
 import mdst
+import simulation as si
 
-# Create the steering path
+# Create Path
 main = b2.Path()
 
 # Set EventInfoSetter
-main.add_module("EventInfoSetter", evtNumList=[10], expList=[0], runList=[0])
+main.add_module("EventInfoSetter", evtNumList=[1000], expList=[0], runList=[0])
 
-# Generate generic events (finalstate="mixed" (B0B0bar), "charged" (B+B-))
-final_state = "mixed"
-ge.add_evtgen_generator(
-    path=main,
-    finalstate=final_state,
-    signaldecfile=None,
+# Sample ("mixed" (BBbar), "charged" (B+B-), "mu+mu-", "tau+tau-")
+final_state = "mu+mu-"
+
+# Add EvtGen generator
+if final_state in ["mixed", "charged"]:
+    ge.add_evtgen_generator(
+        path=main,
+        finalstate=final_state,
+        signaldecfile=None,
+    )
+# Add KKMC generator
+elif final_state in ["mu+mu-", "tau+tau-"]:
+    ge.add_kkmc_generator(
+        path=main,
+        finalstate=final_state,
+        signalconfigfile="",
+    )
+else:
+    raise ValueError(f"Unknown final_state: {final_state}.")
+
+# Add background
+bkg_files = bkg.get_background_files(
+    folder=None, output_file_info=True  # if None, it looks from BELLE2_BACKGROUND_DIR
 )
 
 # Add simulation
-si.add_simulation(path=main)
+si.add_simulation(
+    path=main,
+    components=None,
+    bkgfiles=None,  # to add backgrond set bkgfiles=bkg_files
+    bkgOverlay=True,
+)
 
 # Save output
 main.add_module("RootOutput", outputFileName=f"{final_state}_sim.root")

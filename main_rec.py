@@ -76,7 +76,7 @@ mdst.add_mdst_output(
 )
 
 # Print modules in path
-b2.print_path(main)
+# b2.print_path(main)
 
 b2.process(main)
-print(b2.statistics)
+# print(b2.statistics)
