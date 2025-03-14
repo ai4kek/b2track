@@ -13,17 +13,17 @@
 ######################################################
 
 from basf2 import (
-    Path,
-    process,
-    logging,
-    set_log_level,
-    set_debug_level,
-    LogConfig,
-    LogLevel,
-    LogInfo,
     B2DEBUG,
     B2INFO,
     B2WARNING,
+    LogConfig,
+    LogInfo,
+    LogLevel,
+    Path,
+    logging,
+    process,
+    set_debug_level,
+    set_log_level,
 )
 
 # show default loglevel

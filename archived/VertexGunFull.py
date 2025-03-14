@@ -10,14 +10,14 @@
 ##########################################################################
 
 from basf2 import (
-    set_log_level,
     LogLevel,
-    register_module,
     create_path,
-    process,
-    statistics,
-    set_random_seed,
     print_params,
+    process,
+    register_module,
+    set_log_level,
+    set_random_seed,
+    statistics,
 )
 
 # suppress messages and warnings during processing:

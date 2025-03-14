@@ -9,20 +9,21 @@
 # This file is licensed under LGPL-3.0, see LICENSE.md.                  #
 ##########################################################################
 
-import sys
 import math
+import sys
+
 from basf2 import (
-    create_path,
-    register_module,
-    process,
-    logging,
     LogLevel,
     Module,
+    create_path,
+    logging,
+    process,
+    register_module,
     statistics,
 )
 
 # Load the required libraries
-from ROOT import TH1D, TH2D, TCanvas, Belle2, PyConfig
+from ROOT import TH1D, TH2D, Belle2, PyConfig, TCanvas
 
 logging.log_level = LogLevel.WARNING
 

@@ -16,10 +16,9 @@
 
 import basf2 as b2
 import generators as ge
-import simulation as si
-import reconstruction as re
 import mdst
-
+import reconstruction as re
+import simulation as si
 
 # Create the steering path
 main = b2.create_path()

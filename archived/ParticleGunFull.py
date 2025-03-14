@@ -9,19 +9,18 @@
 # This file is licensed under LGPL-3.0, see LICENSE.md.                  #
 ##########################################################################
 
+import reconstruction as re  # noqa
+import simulation as si  # noqa
 from basf2 import (
-    set_log_level,
-    register_module,
-    process,
     LogLevel,
-    set_random_seed,
-    print_params,
     create_path,
+    print_params,
+    process,
+    register_module,
+    set_log_level,
+    set_random_seed,
     statistics,
 )
-
-import simulation as si  # noqa
-import reconstruction as re  # noqa
 
 # suppress messages and warnings during processing:
 set_log_level(LogLevel.WARNING)

@@ -16,18 +16,17 @@
 
 import basf2 as b2
 import generators as ge
-import simulation as si
-import reconstruction as re
 import mdst
-
+import reconstruction as re
+import simulation as si
 from basf2 import (
-    set_log_level,
-    register_module,
-    process,
     LogLevel,
-    set_random_seed,
-    print_params,
     create_path,
+    print_params,
+    process,
+    register_module,
+    set_log_level,
+    set_random_seed,
     statistics,
 )
 
