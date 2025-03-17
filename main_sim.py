@@ -14,13 +14,18 @@ import generators as ge
 import mdst
 import simulation as si
 
+# TODO: How to prepend a globaltag? (see Section 5.4 of basf2 docs)
+# TODO: How to add background to simulation? (see Section 9. of basf2 docs)
+# TODO: How to add KKMC for dimuons sample? (see Section 13. of basf2 docs)
+
 # Create Path
 main = b2.Path()
 
-# Set EventInfoSetter
+# Set EventInfoSetter (exp # 0 or 1004, or custom [need a specific globaltag])
+# For run independent Monte Carlo set run # to zero.
 main.add_module("EventInfoSetter", evtNumList=[1000], expList=[0], runList=[0])
 
-# Sample ("mixed" (BBbar), "charged" (B+B-), "mu+mu-", "tau+tau-")
+# MC sample: 'mixed' (BBbar), 'charged' (B+B-), 'mu+mu-' (dimuon), 'tau+tau-'
 final_state = "mu+mu-"
 
 # Add EvtGen generator
@@ -41,8 +46,9 @@ else:
     raise ValueError(f"Unknown final_state: {final_state}.")
 
 # Add background
+bkg_dir = None  # add path to use a specific background folder, 'None' use defalut
 bkg_files = bkg.get_background_files(
-    folder=None, output_file_info=True  # if None, it looks from BELLE2_BACKGROUND_DIR
+    folder=None, output_file_info=True  # default Bkg at BELLE2_BACKGROUND_DIR
 )
 
 # Add simulation

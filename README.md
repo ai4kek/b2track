@@ -101,9 +101,9 @@ Main tracking functions as part of reconstruction task comes from the top-level 
 | │   │
 | │   ├── add_track_finding()
 | │   │   ├── add_cdc_track_finding()
-| │   │   ├── add_svd_track_finding()     # use_svd_to_cdc_ckf: SVD to CDC CKF ("ToCDCCKF")
+| │   │   ├── add_svd_track_finding()     # use_svd_to_cdc_ckf: SVDToCDCCKF ("ToCDCCKF")
 | │   │   ├── add_pxd_track_finding()
-| │   │   └── add_eclcdc_track_finding()  # use_ecl_to_cdc_ckf: ECL to CDC CKF ("T0CDCCKF") 
+| │   │   └── add_eclcdc_track_finding()  # use_ecl_to_cdc_ckf: ECLToCDCCKF ("T0CDCCKF") 
 | │   ├── add_mc_track_finding()
 | │   │
 | ├── add_postfilter_tracking_reconstruction()
@@ -115,47 +115,52 @@ Main tracking functions as part of reconstruction task comes from the top-level 
 The difference between `add_reconstruction()` and `add_tracking_reconstruction()` is only additional modules to calculate the software trigger cuts which are added in the `add_reconstruction()`. So for track reconstruction only, one can simply use `add_tracking_reconstruction()`. For example,
 
 ```shell
-# steering file
-import sys
+#!/usr/bin/env python3
+
+##########################################################################
+# basf2 (Belle II Analysis Software Framework)                           #
+# Author: The Belle II Collaboration                                     #
+#                                                                        #
+# See git log for contributors and copyright holders.                    #
+# This file is licensed under LGPL-3.0, see LICENSE.md.                  #
+##########################################################################
+
 import basf2 as b2
-from tracking import add_tracking_reconstruction
+import generators as ge
+import mdst
+import reconstruction as re
+import simulation as si
+import tracking as trkx
 
-path = b2.create_path()
 
-root_input = b2.register_module('RootInput')
-root_input.param('inputFileNames', input_root_files)
-path.add_module(root_input)
+main = b2.Path()
 
-gearbox = b2.register_module('Gearbox')
-path.add_module(gearbox)
+# Add RootInput
+main.add_module("RootInput", inputFileName="mixed_sim.root")
 
-geometry = b2.register_module('Geometry')
-path.add_module(geometry)
+# Add full reconstruction
+# re.add_reconstruction(path=main)
 
-add_tracking_reconstruction(
-    path,
+# Add full tracking reconstuction
+trkx.add_tracking_reconstruction(
+    path=main,
     components=None,
     pruneTracks=False,
-    mcTrackFinding=False,       # set mcTrackFinding
-    skipGeometryAdding=False
+    mcTrackFinding=False,
+    skipGeometryAdding=False,
 )
 
-modList = path.modules()
-for modItem in modList:
-    if modItem.name() == 'V0Finder':
-        modItem.param('Validation', True)
+# Create the mDST output file
+additional_br = []
+outFile = "mdst_reco.root"
+mdst.add_mdst_output(
+    path=main,
+    mc=True,
+    filename=outFile,
+    additionalBranches=additional_br,
+    dataDescription=None,
+)
 
-
-v0matcher = b2.register_module('MCV0Matcher')
-v0matcher.param('V0ColName', 'V0ValidationVertexs')
-v0matcher.logging.log_level = b2.LogLevel.INFO
-path.add_module(v0matcher)
-
-path.add_module('Progress')
-
-root_output = b2.register_module('RootOutput')
-root_output.param('outputFileName', output_file_name)
-path.add_module(root_output)
-
-b2.process(path)
+b2.process(main)
+print(b2.statistics)
 ```
