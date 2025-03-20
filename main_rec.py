@@ -24,7 +24,7 @@ main = b2.Path()
 # TODO: Set debug_level to 20-29 (To debug CKFToCDCFindlet)
 # b2.set_log_level(level=29)
 
-# Add simulated data (RootInput): "mixed", "charged" generic states
+# Add simulated data (RootInput): 'mixed', 'charged', and 'mu+mu-' samples
 main.add_module("RootInput", inputFileName="mixed_sim.root")
 
 # Add SVD Reconstruction
@@ -45,10 +45,7 @@ trkx.add_tracking_reconstruction(
     skipGeometryAdding=False,
 )
 
-# TODO: Add SVD, ToCDCCKF
-
-
-# TODO (DONE): Change ToCDCCKF parameters
+# ToCDCCKF parameters
 params = {
     "maximalDeltaPhi": 0.4,  # Maximal distance in phi between wires for Z=0 plane
     "maximalLayerJump": 6,  # Maximal jump over N layers
@@ -58,7 +55,7 @@ params = {
 
 b2.set_module_parameters(main, name="ToCDCCKF", type=None, recursive=True, **params)
 
-# TODO (DONE): Print module parameters
+# Print module parameters
 for module in main.modules():
     if module.name() == "ToCDCCKF":
         # module.param("maximalLayerJump", 6)  # change a parameter

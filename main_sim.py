@@ -21,8 +21,8 @@ import simulation as si
 # Create Path
 main = b2.Path()
 
-# Set EventInfoSetter (exp # 0 or 1004, or custom [need a specific globaltag])
-# For run independent Monte Carlo set run # to zero.
+# Set expList=[0], or custom [need a specific globaltag] for specific geometry.
+# For run-independent Monte Carlo simulation set runList=[0] below.
 main.add_module("EventInfoSetter", evtNumList=[1000], expList=[0], runList=[0])
 
 # MC sample: 'mixed' (BBbar), 'charged' (B+B-), 'mu+mu-' (dimuon), 'tau+tau-'
