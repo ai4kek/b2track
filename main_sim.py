@@ -16,12 +16,13 @@ import simulation as si
 
 # TODO: How to prepend a globaltag? (see Section 5.4 of basf2 docs)
 # TODO: How to add background to simulation? (see Section 9. of basf2 docs)
-# TODO: How to add KKMC for dimuons sample? (see Section 13. of basf2 docs)
+# TODO: How to visualize wire efficiency map of CDC for an experiment?
+# TODO: How to switch on-off some parts of the CDC?
 
 # Create Path
 main = b2.Path()
 
-# Set expList=[0], or custom [need a specific globaltag] for specific geometry.
+# Set expList=[0] or [12] or custom, need a specific globaltag/payload.
 # For run-independent Monte Carlo simulation set runList=[0] below.
 main.add_module("EventInfoSetter", evtNumList=[1000], expList=[0], runList=[0])
 
@@ -46,10 +47,8 @@ else:
     raise ValueError(f"Unknown final_state: {final_state}.")
 
 # Add background
-bkg_dir = None  # add path to use a specific background folder, 'None' use defalut
-bkg_files = bkg.get_background_files(
-    folder=None, output_file_info=True  # default Bkg at BELLE2_BACKGROUND_DIR
-)
+bkg_dir = None  # None (default: BELLE2_BACKGROUND_DIR on KEKCC) or set a path
+bkg_files = bkg.get_background_files(folder=None, output_file_info=True)
 
 # Add simulation
 si.add_simulation(
