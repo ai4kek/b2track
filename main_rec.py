@@ -8,78 +8,19 @@
 # This file is licensed under LGPL-3.0, see LICENSE.md.                  #
 ##########################################################################
 
+import csv  # noqa: F401
+
 import basf2 as b2
-import cdc
-import csv
-import generators as ge
+import cdc  # noqa: F401
+import generators as ge  # noqa: F401
 import mdst
-import reconstruction as re
-import simulation as si
-import svd
+import reconstruction as re  # noqa: F401
+import simulation as si  # noqa: F401
+import svd  # noqa: F401
 import tracking as trkx
-from ROOT import Belle2
+from ROOT import Belle2  # noqa: F401
 
-
-def save_params_to_csv(
-    module, print_values=True, shared_lib_path=None, filename="parameters.csv"
-):
-    """
-    This function saves parameter information to a CSV file.
-
-    Parameters:
-      module: The module to retrieve parameter information from
-      filename: Name of the output CSV file (default: 'parameters.csv')
-      print_values: If True, saves the current parameter values as well
-      shared_lib_path: Path of the shared library from which the module was loaded
-    """
-
-    # Gather output data in table
-    output = []
-    if print_values:
-        headers = ["Parameter", "Type", "Default", "Current", "Steering", "Description"]
-    else:
-        headers = ["Parameter", "Type", "Default", "Description"]
-
-    output.append(headers)
-
-    has_forced_params = False
-    paramList = module.available_params()
-
-    for paramItem in paramList:
-        defaultStr = str(paramItem.default)
-        valueStr = str(paramItem.values)
-        forceString = ""
-        if paramItem.forceInSteering:
-            forceString = "*"
-            has_forced_params = True
-            defaultStr = ""  # Required parameters don’t have default values
-
-        if print_values:
-            row = [
-                forceString + paramItem.name,
-                paramItem.type,
-                defaultStr,
-                valueStr,
-                paramItem.setInSteering,
-                paramItem.description,
-            ]
-        else:
-            row = [
-                forceString + paramItem.name,
-                paramItem.type,
-                defaultStr,
-                paramItem.description,
-            ]
-
-        output.append(row)
-
-    # Save to CSV file
-    with open(filename, mode="w", newline="", encoding="utf-8") as file:
-        writer = csv.writer(file)
-        writer.writerows(output)
-
-    print(f"[ADAK] {module.name()} parameters saved to {filename}...")
-
+from src.track_metrics import TrackMetricsModule
 
 # Create the steering path
 main = b2.Path()
@@ -89,15 +30,6 @@ main = b2.Path()
 
 # Add simulated data (RootInput): 'mixed', 'charged', and 'mu+mu-' samples
 main.add_module("RootInput", inputFileName="mixed_sim.root")
-
-# Add SVD Reconstruction
-# svd.add_svd_reconstruction(main)
-
-# Add CDC Reconstruction
-# cdc.add_cdc_reconstruction(main)
-
-# Add full reconstruction
-# re.add_reconstruction(path=main)
 
 # Add full tracking reconstuction
 trkx.add_tracking_reconstruction(
@@ -144,10 +76,10 @@ for module in main.modules():
 
 
 # Print ToCDCCKF prameters
-b2.print_params(b2.register_module("ToCDCCKF"), print_values=True)
+# b2.print_params(b2.register_module("ToCDCCKF"), print_values=True)
 
 # Save ToCDCCKF prameters (hacked version of b2.print_params)
-save_params_to_csv(b2.register_module("ToCDCCKF"), print_values=True)
+# save_params_to_csv(b2.register_module("ToCDCCKF"), print_values=True)
 
 # Create the mDST output file
 additional_br = []
@@ -159,6 +91,9 @@ mdst.add_mdst_output(
     additionalBranches=additional_br,
     dataDescription=None,
 )
+
+# Add track metrics module
+main.add_module(TrackMetricsModule)
 
 # Print modules in path
 # b2.print_path(main)
