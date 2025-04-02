@@ -8,19 +8,9 @@
 # This file is licensed under LGPL-3.0, see LICENSE.md.                  #
 ##########################################################################
 
-import csv  # noqa: F401
-
 import basf2 as b2
-import cdc  # noqa: F401
-import generators as ge  # noqa: F401
 import mdst
-import reconstruction as re  # noqa: F401
-import simulation as si  # noqa: F401
-import svd  # noqa: F401
 import tracking as trkx
-from ROOT import Belle2  # noqa: F401
-
-from src.track_metrics import TrackMetricsModule
 
 # Create the steering path
 main = b2.Path()
@@ -50,8 +40,8 @@ params = {
 }
 
 params_1 = {
-    "filter": "size",
-    "pathFilter": "arc_length",
+    # "filter": "size",
+    # "pathFilter": "arc_length",
     # "filterParameters": {},
     # "pathFilterParameters": {},
     # "stateBasicFilterParameters": {'maximalHitDistance': 0.15},
@@ -92,11 +82,8 @@ mdst.add_mdst_output(
     dataDescription=None,
 )
 
-# Add track metrics module
-main.add_module(TrackMetricsModule)
-
 # Print modules in path
-# b2.print_path(main)
+b2.print_path(main)
 
 b2.process(main)
-# print(b2.statistics)
+print(b2.statistics)
