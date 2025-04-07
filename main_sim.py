@@ -27,7 +27,7 @@ main = b2.Path()
 main.add_module("EventInfoSetter", evtNumList=[1000], expList=[0], runList=[0])
 
 # MC sample: 'mixed' (BBbar), 'charged' (B+B-), 'mu+mu-' (dimuon), 'tau+tau-'
-final_state = "mu+mu-"
+final_state = "mixed"
 
 # Add EvtGen generator
 if final_state in ["mixed", "charged"]:

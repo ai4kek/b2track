@@ -12,11 +12,8 @@ import basf2 as b2
 import mdst
 import tracking as trkx
 
-# Create the steering path
+# Steering path
 main = b2.Path()
-
-# TODO: Set debug_level to 20-29 (To debug CKFToCDCFindlet)
-# b2.set_log_level(level=29)
 
 # Add simulated data (RootInput): 'mixed', 'charged', and 'mu+mu-' samples
 main.add_module("RootInput", inputFileName="mixed_sim.root")
@@ -54,7 +51,7 @@ params_1 = {
     "setTakenFlag": True,  #
 }
 
-b2.set_module_parameters(main, name="ToCDCCKF", type=None, recursive=True, **params)
+# b2.set_module_parameters(main, name="ToCDCCKF", type=None, recursive=True, **params)
 
 # Handle ToCDCCKF module
 for module in main.modules():
