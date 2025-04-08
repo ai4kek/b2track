@@ -62,11 +62,10 @@ __pycache__
 .vscode
 .ipynb_checkpoints
 .virtual_documents
-
-Talks
-Papers
-
 venv*
 develop
+dataset
+Talks
+Papers
 html
 results
