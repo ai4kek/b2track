@@ -22,7 +22,7 @@ b2.set_random_seed(12345)
 # b2.set_log_level(b2.LogLevel.DEBUG)
 # print("New loglevel:    ", b2.logging.log_level)
 
-# Create Path
+# Steering Path
 main = b2.Path()
 
 # Set expList=[0] or [12] or custom, need a specific globaltag/payload.
@@ -55,5 +55,6 @@ main.add_module("RootOutput", outputFileName=f"dataset/{final_state}_gen.root")
 # Print modules in path
 # b2.print_path(main)
 
+# Run event loop
 b2.process(main)
 print(b2.statistics)

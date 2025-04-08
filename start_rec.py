@@ -15,8 +15,9 @@ import tracking as trkx
 # Steering path
 main = b2.Path()
 
-# Add simulated data (RootInput): 'mixed', 'charged', and 'mu+mu-' samples
-main.add_module("RootInput", inputFileName="mixed_sim.root")
+# Add simulated data: 'mixed', 'charged', and 'mu+mu-' samples
+final_state = "mixed"
+main.add_module("RootInput", inputFileName=f"dataset/{final_state}_sim.root")
 
 # Add full tracking reconstuction
 trkx.add_tracking_reconstruction(
@@ -68,13 +69,12 @@ for module in main.modules():
 # Save ToCDCCKF prameters (hacked version of b2.print_params)
 # save_params_to_csv(b2.register_module("ToCDCCKF"), print_values=True)
 
-# Create the mDST output file
+# Create the mDST
 additional_br = []
-outFile = "mixed_reco.root"
 mdst.add_mdst_output(
     path=main,
     mc=True,
-    filename=outFile,
+    filename=f"dataset/{final_state}_rec.root",
     additionalBranches=additional_br,
     dataDescription=None,
 )
@@ -82,5 +82,6 @@ mdst.add_mdst_output(
 # Print modules in path
 b2.print_path(main)
 
+# Run event loop
 b2.process(main)
 print(b2.statistics)
