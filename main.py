@@ -13,17 +13,17 @@ import basf2 as b2
 import generators as ge
 import mdst
 import simulation as si
+import tracking as trkx
 
-# TODO: How to prepend a globaltag? (see Section 5.4 of basf2 docs)
-# TODO: How to add background to simulation? (see Section 9. of basf2 docs)
-# TODO: How to visualize wire efficiency map of CDC for an experiment?
-# TODO: How to switch on-off some parts of the CDC?
+# Reproducibility
+b2.set_random_seed(12345)
 
-# Create Path
+# Logging
+b2.set_log_level(b2.LogLevel.INFO)
+
+# Steering Path
 main = b2.Path()
 
-# Set expList=[0] or [12] or custom, need a specific globaltag/payload.
-# For run-independent Monte Carlo simulation set runList=[0] below.
 main.add_module("EventInfoSetter", evtNumList=[1000], expList=[0], runList=[0])
 
 # MC sample: 'mixed' (BBbar), 'charged' (B+B-), 'mu+mu-' (dimuon), 'tau+tau-'
@@ -47,8 +47,8 @@ else:
     raise ValueError(f"Unknown final_state: {final_state}.")
 
 # Add background
-bkg_dir = None  # None (default: BELLE2_BACKGROUND_DIR on KEKCC) or set a path
-bkg_files = bkg.get_background_files(folder=None, output_file_info=True)
+# bkg_dir = None  # None (default: BELLE2_BACKGROUND_DIR on KEKCC) or set a path
+# bkg_files = bkg.get_background_files(folder=bkg_dir, output_file_info=True)
 
 # Add simulation
 si.add_simulation(
@@ -58,11 +58,28 @@ si.add_simulation(
     bkgOverlay=True,
 )
 
-# Save output
-main.add_module("RootOutput", outputFileName=f"{final_state}_sim.root")
+
+# Add tracking reconstuction
+trkx.add_tracking_reconstruction(
+    path=main,
+    components=None,
+    pruneTracks=False,
+    mcTrackFinding=False,
+    skipGeometryAdding=False,
+)
+
+# Create the mDST
+additional_br = []
+mdst.add_mdst_output(
+    path=main,
+    mc=True,
+    filename=f"dataset/{final_state}_main.root",
+    additionalBranches=additional_br,
+    dataDescription=None,
+)
 
 # Print modules in path
-# b2.print_path(main)
+b2.print_path(main)
 
 b2.process(main)
 print(b2.statistics)
