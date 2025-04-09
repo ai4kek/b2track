@@ -18,10 +18,11 @@ import csv
 
 # Main Module
 class TrackingMetrics(basf2.Module):
-    def __init__(self, params=None, final_state=None):
+    def __init__(self, params=None, finalstate=None, filename=None):
         super().__init__()
         self.params = params or {}
-        self.final_state = final_state or "unknown"
+        self.finalstate = finalstate or "unknown"
+        self.filename = filename or "test.csv"
 
     def initialize(self):
         """initialize"""
@@ -147,22 +148,21 @@ class TrackingMetrics(basf2.Module):
 
         return 0
 
-    def save_metrics(self, efficiency, purity, filename="track_metrics.csv"):
+    def save_metrics(self, efficiency, purity):
         """Save ToCDCCKF parameters along with Tracking Efficiency and Purity"""
-        file_exists = os.path.isfile(filename)
 
         row_data = self.params.copy()
         row_data.update(
             {
                 "efficiency": efficiency,
                 "purity": purity,
-                "final_state": self.final_state,
+                "finalstate": self.finalstate,
             }
         )
-        fieldnames = list(row_data.keys())
 
-        with open(filename, mode="a", newline="") as f:
-            writer = csv.DictWriter(f, fieldnames=fieldnames)
+        file_exists = os.path.exists(self.filename)
+        with open(self.filename, mode="a", newline="") as f:
+            writer = csv.DictWriter(f, fieldnames=row_data.keys())
 
             if not file_exists:
                 writer.writeheader()
@@ -172,10 +172,11 @@ class TrackingMetrics(basf2.Module):
 
 # Clean version of above (quick testing)
 class TrackMetrics(basf2.Module):
-    def __init__(self, params=None, final_state=None):
+    def __init__(self, params=None, finalstate=None, filename=None):
         super().__init__()
         self.params = params or {}
-        self.final_state = final_state or "unknown"
+        self.finalstate = finalstate or "unknown"
+        self.filename = filename or "test.csv"
 
     def initialize(self):
         self.MCParticles = Belle2.PyStoreArray("MCParticles")
@@ -195,12 +196,13 @@ class TrackMetrics(basf2.Module):
             if track.getRelated("MCParticles"):
                 self.matched_reco_tracks += 1
 
-        isSelected = (
-            abs(mc.getPDG()) == 211
-            and mc.hasStatus(1)
-            and mc.hasSeenInDetector(Belle2.Const.DetectorSet(Belle2.Const.CDC))
-        )
         for mc in self.MCParticles:
+            isSelected = (
+                abs(mc.getPDG()) == 211
+                and mc.hasStatus(1)
+                and mc.hasSeenInDetector(Belle2.Const.DetectorSet(Belle2.Const.CDC))
+            )
+
             if isSelected:
                 self.selected_mc_particles += 1
                 if mc.getRelated("Tracks"):
@@ -227,12 +229,11 @@ class TrackMetrics(basf2.Module):
             **self.params,
             "efficiency": efficiency,
             "purity": purity,
-            "final_state": self.final_state,
+            "finalstate": self.finalstate,
         }
-        csv_file = "track_metrics.csv"
-        file_exists = os.path.exists(csv_file)
 
-        with open(csv_file, "a", newline="") as f:
+        file_exists = os.path.exists(self.filename)
+        with open(self.filename, "a", newline="") as f:
             writer = csv.DictWriter(f, fieldnames=row.keys())
 
             if not file_exists:
