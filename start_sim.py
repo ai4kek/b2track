@@ -8,8 +8,8 @@
 # This file is licensed under LGPL-3.0, see LICENSE.md.                  #
 ##########################################################################
 
-import background as bkg
-import basf2 as b2
+import background
+import basf2
 import generators as ge
 import mdst
 import simulation as si
@@ -21,10 +21,10 @@ import logging
 # TODO: How to switch on-off some parts of the CDC?
 
 # Reproducibility
-b2.set_random_seed(12345)
+basf2.set_random_seed(12345)
 
 # Steering Path
-main = b2.Path()
+main = basf2.Path()
 
 # Set expList=[0] or [12] or custom, need a specific globaltag/payload.
 # For run-independent Monte Carlo simulation set runList=[0] below.
@@ -52,7 +52,7 @@ else:
 
 # Add background
 # bkg_dir = None  # None (default: BELLE2_BACKGROUND_DIR on KEKCC) or set a path
-# bkg_files = bkg.get_background_files(folder=bkg_dir, output_file_info=True)
+# bkg_files = background.get_background_files(folder=bkg_dir, output_file_info=True)
 
 # Add simulation
 si.add_simulation(
@@ -66,8 +66,8 @@ si.add_simulation(
 main.add_module("RootOutput", outputFileName=f"dataset/{final_state}_sim.root")
 
 # Print modules in path
-# b2.print_path(main)
+# basf2.print_path(main)
 
 # Run event loop
-b2.process(main)
-print(b2.statistics)
+basf2.process(main)
+print(basf2.statistics)

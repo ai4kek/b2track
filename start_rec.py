@@ -8,12 +8,15 @@
 # This file is licensed under LGPL-3.0, see LICENSE.md.                  #
 ##########################################################################
 
-import basf2 as b2
+import basf2
 import mdst
 import tracking as trkx
 
-# Steering path
-main = b2.Path()
+# Reproducibility
+basf2.set_random_seed(12345)
+
+# Steering Path
+main = basf2.Path()
 
 # Add simulated data: 'mixed', 'charged', and 'mu+mu-' samples
 final_state = "mixed"
@@ -37,37 +40,22 @@ params = {
     "stateMaximalHitCandidates": 4,  # ???
 }
 
-params_1 = {
-    # "filter": "size",
-    # "pathFilter": "arc_length",
-    # "filterParameters": {},
-    # "pathFilterParameters": {},
-    # "stateBasicFilterParameters": {'maximalHitDistance': 0.15},
-    # "stateExtrapolationFilterParameters": {},
-    # "stateFinalFilterParameters": {},
-    # "statePreFilterParameters": {},
-    "exportAllTracks": False,  #
-    "exportTracks": True,  #
-    "ignoreTracksWithCDChits": True,  #
-    "setTakenFlag": True,  #
-}
-
-# b2.set_module_parameters(main, name="ToCDCCKF", type=None, recursive=True, **params)
+basf2.set_module_parameters(main, name="ToCDCCKF", type=None, recursive=True, **params)
 
 # Handle ToCDCCKF module
 for module in main.modules():
     if module.name() == "ToCDCCKF":
         print(f"[ADAK] The {module} exists in the Path...")
         # module.param("maximalLayerJump", 6)  # change a parameter
-        # b2.print_params(module, print_values=True) # print prameters
+        # basf2.print_params(module, print_values=True) # print prameters
         # save_params_to_csv(module, print_values=True)  # save parameters
 
 
 # Print ToCDCCKF prameters
-# b2.print_params(b2.register_module("ToCDCCKF"), print_values=True)
+# basf2.print_params(basf2.register_module("ToCDCCKF"), print_values=True)
 
-# Save ToCDCCKF prameters (hacked version of b2.print_params)
-# save_params_to_csv(b2.register_module("ToCDCCKF"), print_values=True)
+# Save ToCDCCKF prameters (hacked version of basf2.print_params)
+# save_params_to_csv(basf2.register_module("ToCDCCKF"), print_values=True)
 
 # Create the mDST
 additional_br = []
@@ -80,8 +68,8 @@ mdst.add_mdst_output(
 )
 
 # Print modules in path
-b2.print_path(main)
+basf2.print_path(main)
 
 # Run event loop
-b2.process(main)
-print(b2.statistics)
+basf2.process(main)
+print(basf2.statistics)

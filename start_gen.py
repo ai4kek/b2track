@@ -15,15 +15,10 @@ import simulation as si
 import logging
 
 # Reproducibility
-b2.set_random_seed(12345)
-
-# Logging (default in b2.LogLevel.INFO)
-# print("Default loglevel:", b2.logging.log_level)
-# b2.set_log_level(b2.LogLevel.DEBUG)
-# print("New loglevel:    ", b2.logging.log_level)
+basf2.set_random_seed(12345)
 
 # Steering Path
-main = b2.Path()
+main = basf2.Path()
 
 # Set expList=[0] or [12] or custom, need a specific globaltag/payload.
 # For run-independent Monte Carlo simulation set runList=[0] below.

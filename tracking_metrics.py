@@ -8,7 +8,7 @@
 # This file is licensed under LGPL-3.0, see LICENSE.md.                  #
 ##########################################################################
 
-""" To run this script: basf2 tracks.py -- -f1 mixed/ntuple.root -p1 mixed"""
+""" To run this script: basf2 tracking_metrics.py -- -f1 mixed/ntuple.root -p1 mixed"""
 
 import argparse
 import math
