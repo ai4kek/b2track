@@ -10,24 +10,31 @@ class TrackingMetrics(basf2.Module):
     def initialize(self):
         """initialize"""
 
-        # Particles StoreArray
+        # ------ Tracking Efficiency and Purity ------
+
+        # related StoreArrays
         self.MCParticles = Belle2.PyStoreArray("MCParticles")
-        self.MCParticles.isRequired()
-
-        # Tracks StoreArray
         self.Tracks = Belle2.PyStoreArray("Tracks")
-        self.Tracks.isRequired()
 
-        # Get relations (How to access and use?)
-        # relations = Belle2.PyStoreArray('TracksToMCParticles')
-
-        # counters
+        # related counters
         self.matched_mc_particles = 0
         self.selected_mc_particles = 0
         self.total_mc_particles = 0
-
         self.matched_reco_tracks = 0
-        self.total_reco_tracks = 0
+        self.selected_reco_tracks = 0
+
+        # ------ Hit Efficiency and Purity ------
+
+        # related StoreArrays
+        # self.RecoTrack = Belle2.PyStoreArray('RecoTracks')
+        # self.cdchits = Belle2.PyStoreArray('CDCHits')
+        # self.svdclusters = Belle2.PyStoreArray('SVDClusters')
+
+        # related counters
+        # self.n_simCDCHits = 0, self.matched_simCDCHits = 0
+        # self.n_recCDCHits = 0, self.matched_simCDCHits = 0
+        # self.n_simSVDHits = 0, self.matched_simCDCHits = 0
+        # self.n_recSVDHits = 0, self.matched_simCDCHits = 0
 
         return 0
 
@@ -36,10 +43,10 @@ class TrackingMetrics(basf2.Module):
 
         # count total
         self.total_mc_particles += self.MCParticles.getEntries()
-        self.total_reco_tracks += self.Tracks.getEntries()
+        self.selected_reco_tracks += self.Tracks.getEntries()
 
         # Tracking Purity: Number of matched reconstructed tracks divided by total
-        # reconstructed tracks. We already have 'total_reco_tracks', but need to
+        # reconstructed tracks. We already have 'selected_reco_tracks', but need to
         # find 'matched_reco_tracks' by counting reconstructed tracks that are
         # matched to an mc particle per event, then aggregate for all events.
 
@@ -62,7 +69,7 @@ class TrackingMetrics(basf2.Module):
         # Count matched MC Particles
         for mc in self.MCParticles:
 
-            # selected criteria
+            # particle selection criteria
             isChargedPion = abs(mc.getPDG()) == 211  # only charged pions
             isCharged = mc.getCharge() != 0  # only charged particles
             isPrimary = mc.hasStatus(1)  # only primary particles
@@ -79,18 +86,24 @@ class TrackingMetrics(basf2.Module):
                 # count selected particles
                 self.selected_mc_particles += 1
 
-                # matched to a track with no clones (FIXME: No clones?)
-                # particle_to_track_relations = mc.getRelationsFrom("Tracks")
-                # particle_to_track_relation = mc.getRelatedFrom("Tracks")
-                particle_to_track_relation = mc.getRelated("Tracks")
-                if particle_to_track_relation:
+                # matched to a track with no clones
+                # FIXME: How to handle clones?
+
+                # particle_to_track_relation = mc.getRelationsFrom("Tracks")
+                particle_to_track_relation = mc.getRelatedFrom("Tracks")
+                # particle_to_track_relation = mc.getRelated("Tracks")
+
+                # num_relations = len(particle_to_track_relation)
+                num_relations = particle_to_track_relation
+                if num_relations:
                     self.matched_mc_particles += 1
 
         return 0
 
     def terminate(self):
         """terminate"""
-        # overall efficiency
+
+        # tracking efficiency
         efficiency = 0
         if self.total_mc_particles > 0:
             efficiency = self.matched_mc_particles / self.selected_mc_particles
@@ -100,14 +113,14 @@ class TrackingMetrics(basf2.Module):
         print(f"Selected MC particles: {self.selected_mc_particles}")
         print(f"Total MC particles: {self.total_mc_particles}")
 
-        # overall purity
+        # tracking purity
         purity = 0
-        if self.total_reco_tracks > 0:
-            purity = self.matched_reco_tracks / self.total_reco_tracks
+        if self.selected_reco_tracks > 0:
+            purity = self.matched_reco_tracks / self.selected_reco_tracks
 
         print(f"\nTracking Purity: {purity:.4f}")
         print(f"Matched reconstructed tracks: {self.matched_reco_tracks}")
-        print(f"Total reconstructed tracks: {self.total_reco_tracks}")
+        print(f"Selected reconstructed tracks: {self.selected_reco_tracks}")
 
         # save metrics to file
         with open("track_metrics.csv", "w") as f:
