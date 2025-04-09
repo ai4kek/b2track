@@ -4,9 +4,15 @@ import basf2
 import mdst
 import logging
 from ROOT import Belle2
+import os
+import csv
 
 
 class TrackingMetrics(basf2.Module):
+    def __init__(self, params=None):
+        super().__init__()
+        self.params = params or {}
+
     def initialize(self):
         """initialize"""
 
@@ -52,7 +58,7 @@ class TrackingMetrics(basf2.Module):
 
         # Count matched Tracks
         for track in self.Tracks:
-            # track_to_particle_relations = track.getRelationsTo("MCParticles")
+            # track_to_particle_relation = track.getRelationsTo("MCParticles")
             # track_to_particle_relation = track.getRelatedTo("MCParticles")
             track_to_particle = track.getRelated("MCParticles")
 
@@ -86,17 +92,21 @@ class TrackingMetrics(basf2.Module):
                 # count selected particles
                 self.selected_mc_particles += 1
 
-                # matched to a track with no clones
-                # FIXME: How to handle clones?
-
+                # count selected and matched particles
                 # particle_to_track_relation = mc.getRelationsFrom("Tracks")
-                particle_to_track_relation = mc.getRelatedFrom("Tracks")
-                # particle_to_track_relation = mc.getRelated("Tracks")
+                # particle_to_track_relation = mc.getRelatedFrom("Tracks")
+                particle_to_track_relation = mc.getRelated("Tracks")
 
-                # num_relations = len(particle_to_track_relation)
-                num_relations = particle_to_track_relation
-                if num_relations:
+                # it relation exists (not nullptr), there might a better way to check
+                if particle_to_track_relation:
+                    # Since its a Track object, we can see more info:
+
+                    # print(f"Track Quality Indicator: {particle_to_track_relation.getQualityIndicator()}")
+                    # print(f"Fitted Hypothesis: {particle_to_track_relation.getNumberOfFittedHypotheses()}")
+
                     self.matched_mc_particles += 1
+
+        # TODO: Find Hit Efficiency & Purity: RecoTracks, CDCHits & SVDClusters
 
         return 0
 
@@ -122,13 +132,26 @@ class TrackingMetrics(basf2.Module):
         print(f"Matched reconstructed tracks: {self.matched_reco_tracks}")
         print(f"Selected reconstructed tracks: {self.selected_reco_tracks}")
 
-        # save metrics to file
-        with open("track_metrics.csv", "w") as f:
-            f.write("metric,value\n")
-            f.write(f"efficiency,{efficiency}\n")
-            f.write(f"purity,{purity}\n")
+        # save results to CSV
+        self.save_metrics(efficiency, purity)
 
         return 0
+
+    def save_metrics(self, efficiency, purity, filename="track_metrics.csv"):
+        """Save ToCDCCKF parameters along with Tracking Efficiency and Purity"""
+        file_exists = os.path.isfile(filename)
+
+        row_data = self.params.copy()
+        row_data.update({"efficiency": efficiency, "purity": purity})
+        fieldnames = list(row_data.keys())
+
+        with open(filename, mode="a", newline="") as csvfile:
+            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+
+            if not file_exists:
+                writer.writeheader()
+
+            writer.writerow(row_data)
 
 
 # Steering Path
@@ -141,6 +164,8 @@ main = basf2.Path()
 main.add_module("RootInput", inputFileName="mixed_reco.root")
 
 # Efficiency and Purity Module
-metrics = TrackingMetrics()
+params = {"trial": 1, "param1": 1.0, "param2": 0.25, "myTag": "experimentA"}
+
+metrics = TrackingMetrics(params)
 main.add_module(metrics)
 basf2.process(main)
