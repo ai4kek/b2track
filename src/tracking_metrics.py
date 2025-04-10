@@ -172,7 +172,7 @@ class TrackingMetrics(basf2.Module):
             # Primary, charged pions seen in CDC
             isSelected = isPrimary and isChargedPion and isSeen and notSecPhyProc
 
-            if selected:
+            if isSelected:
 
                 # count selected particles
                 self.selected_mc_particles += 1
