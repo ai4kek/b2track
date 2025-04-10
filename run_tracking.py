@@ -42,7 +42,7 @@ basf2.set_module_parameters(main, name="ToCDCCKF", recursive=True, **params)
 
 # Calculate tracking metrics
 main.add_module(
-    TrackingMetrics(params=params, finalstate=final_state, filename="track_metrics.csv")
+    TrackingMetrics(params=params, finalstate=final_state, filename="metrics.csv")
 )
 
 # Add mDST output (not required for search)

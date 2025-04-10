@@ -26,10 +26,10 @@ main = basf2.Path()
 final_state = "mixed"
 main.add_module("RootInput", inputFileName=f"dataset/{final_state}_reco.root")
 
-# Efficiency and Purity Module
+# TrackingMetrics Module
 params = {"trial": 1, "param1": 1.0, "param2": 0.25, "myTag": "experimentA"}
 
 main.add_module(
-    TrackMetrics(params=params, finalstate=final_state, filename="test_metrics.csv")
+    TrackMetrics(params=params, finalstate=final_state, filename="test.csv")
 )
 basf2.process(main)

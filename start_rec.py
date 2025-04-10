@@ -31,7 +31,7 @@ trkx.add_tracking_reconstruction(
     skipGeometryAdding=False,
 )
 
-# ToCDCCKF parameters
+# Select parameters for ToCDCCKF
 params = {
     "maximalDeltaPhi": 0.4,  # Maximal distance in phi between wires for Z=0 plane
     "maximalLayerJump": 4,  # Maximal jump over N layers
@@ -40,7 +40,8 @@ params = {
     "stateMaximalHitCandidates": 4,  # ???
 }
 
-basf2.set_module_parameters(main, name="ToCDCCKF", type=None, recursive=True, **params)
+# Inject parameters into ToCDCCKF
+# basf2.set_module_parameters(main, name="ToCDCCKF", type=None, recursive=True, **params)
 
 # Handle ToCDCCKF module
 for module in main.modules():
@@ -57,15 +58,25 @@ for module in main.modules():
 # Save ToCDCCKF prameters (hacked version of basf2.print_params)
 # save_params_to_csv(basf2.register_module("ToCDCCKF"), print_values=True)
 
-# Create the mDST
-additional_br = []
+# Save mDST dataobjects
+additional_br = [
+    "RecoTracks",
+    "RecoTracksToMCParticles",
+    "CDCSimHits",
+    "CDCHits",
+    "SVDSimHits",
+    "SVDClusters",
+]
+
 mdst.add_mdst_output(
     path=main,
     mc=True,
-    filename=f"dataset/{final_state}_rec.root",
+    filename=f"dataset/{final_state}_reco.root",
     additionalBranches=additional_br,
-    dataDescription=None,
 )
+
+# Save all dataobjects
+# main.add_module("RootOutput", outputFileName=f"{final_state}_reco.root")
 
 # Print modules in path
 basf2.print_path(main)
