@@ -17,6 +17,79 @@ import csv
 
 
 # Main Module
+class TrackMetrics(basf2.Module):
+    def __init__(self, params=None, finalstate=None, filename=None):
+        super().__init__()
+        self.params = params or {}
+        self.finalstate = finalstate or "unknown"
+        self.filename = filename or "test.csv"
+
+    def initialize(self):
+        self.MCParticles = Belle2.PyStoreArray("MCParticles")
+        self.Tracks = Belle2.PyStoreArray("Tracks")
+        self.matched_mc_particles = 0
+        self.selected_mc_particles = 0
+        self.total_mc_particles = 0
+        self.matched_reco_tracks = 0
+        self.selected_reco_tracks = 0
+        return 0
+
+    def event(self):
+        self.total_mc_particles += self.MCParticles.getEntries()
+        self.selected_reco_tracks += self.Tracks.getEntries()
+
+        for track in self.Tracks:
+            if track.getRelated("MCParticles"):
+                self.matched_reco_tracks += 1
+
+        for mc in self.MCParticles:
+            isSelected = (
+                abs(mc.getPDG()) == 211
+                and mc.hasStatus(1)
+                and mc.hasSeenInDetector(Belle2.Const.DetectorSet(Belle2.Const.CDC))
+            )
+
+            if isSelected:
+                self.selected_mc_particles += 1
+                if mc.getRelated("Tracks"):
+                    self.matched_mc_particles += 1
+        return 0
+
+    def terminate(self):
+        efficiency = (
+            self.matched_mc_particles / self.selected_mc_particles
+            if self.selected_mc_particles > 0
+            else 0
+        )
+        purity = (
+            self.matched_reco_tracks / self.selected_reco_tracks
+            if self.selected_reco_tracks > 0
+            else 0
+        )
+
+        print(f"\nTracking Efficiency: {efficiency:.4f}")
+        print(f"Tracking Purity: {purity:.4f}")
+
+        # Save metrics and parameters
+        row = {
+            **self.params,
+            "efficiency": efficiency,
+            "purity": purity,
+            "finalstate": self.finalstate,
+        }
+
+        file_exists = os.path.exists(self.filename)
+        with open(self.filename, "a", newline="") as f:
+            writer = csv.DictWriter(f, fieldnames=row.keys())
+
+            if not file_exists:
+                writer.writeheader()
+
+            writer.writerow(row)
+        return 0
+
+
+# Main Module (Verbose)
 class TrackingMetrics(basf2.Module):
     def __init__(self, params=None, finalstate=None, filename=None):
         super().__init__()
@@ -94,11 +167,12 @@ class TrackingMetrics(basf2.Module):
             isSeen = mc.hasSeenInDetector(  # only seen in CDC
                 Belle2.Const.DetectorSet(Belle2.Const.CDC)
             )
+            notSecPhyProc = mc.getSecondaryPhysicsProcess() == 0  # only primary process
 
             # Primary, charged pions seen in CDC
-            isGoodParticle = isPrimary and isChargedPion and isSeen
+            isSelected = isPrimary and isChargedPion and isSeen and notSecPhyProc
 
-            if isGoodParticle:
+            if selected:
 
                 # count selected particles
                 self.selected_mc_particles += 1
@@ -168,76 +242,3 @@ class TrackingMetrics(basf2.Module):
                 writer.writeheader()
 
             writer.writerow(row_data)
-
-
-# Clean version of above (quick testing)
-class TrackMetrics(basf2.Module):
-    def __init__(self, params=None, finalstate=None, filename=None):
-        super().__init__()
-        self.params = params or {}
-        self.finalstate = finalstate or "unknown"
-        self.filename = filename or "test.csv"
-
-    def initialize(self):
-        self.MCParticles = Belle2.PyStoreArray("MCParticles")
-        self.Tracks = Belle2.PyStoreArray("Tracks")
-        self.matched_mc_particles = 0
-        self.selected_mc_particles = 0
-        self.total_mc_particles = 0
-        self.matched_reco_tracks = 0
-        self.selected_reco_tracks = 0
-        return 0
-
-    def event(self):
-        self.total_mc_particles += self.MCParticles.getEntries()
-        self.selected_reco_tracks += self.Tracks.getEntries()
-
-        for track in self.Tracks:
-            if track.getRelated("MCParticles"):
-                self.matched_reco_tracks += 1
-
-        for mc in self.MCParticles:
-            isSelected = (
-                abs(mc.getPDG()) == 211
-                and mc.hasStatus(1)
-                and mc.hasSeenInDetector(Belle2.Const.DetectorSet(Belle2.Const.CDC))
-            )
-
-            if isSelected:
-                self.selected_mc_particles += 1
-                if mc.getRelated("Tracks"):
-                    self.matched_mc_particles += 1
-        return 0
-
-    def terminate(self):
-        efficiency = (
-            self.matched_mc_particles / self.selected_mc_particles
-            if self.selected_mc_particles > 0
-            else 0
-        )
-        purity = (
-            self.matched_reco_tracks / self.selected_reco_tracks
-            if self.selected_reco_tracks > 0
-            else 0
-        )
-
-        print(f"\nTracking Efficiency: {efficiency:.4f}")
-        print(f"Tracking Purity: {purity:.4f}")
-
-        # Save metrics and parameters
-        row = {
-            **self.params,
-            "efficiency": efficiency,
-            "purity": purity,
-            "finalstate": self.finalstate,
-        }
-
-        file_exists = os.path.exists(self.filename)
-        with open(self.filename, "a", newline="") as f:
-            writer = csv.DictWriter(f, fieldnames=row.keys())
-
-            if not file_exists:
-                writer.writeheader()
-
-            writer.writerow(row)
-        return 0

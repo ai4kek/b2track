@@ -14,9 +14,8 @@ import logging
 from ROOT import Belle2
 import os
 import csv
-from src.tracking_metrics import TrackingMetrics
-
-# from src.tracking_metrics import TrackMetrics as TrackingMetrics
+from src.tracking_metrics import TrackMetrics  # non-verbosed
+from src.tracking_metrics import TrackingMetrics  # verbosed
 
 # Reproducibility
 basf2.set_random_seed(12345)
@@ -31,6 +30,6 @@ main.add_module("RootInput", inputFileName=f"dataset/{final_state}_reco.root")
 params = {"trial": 1, "param1": 1.0, "param2": 0.25, "myTag": "experimentA"}
 
 main.add_module(
-    TrackingMetrics(params=params, finalstate=final_state, filename="test.csv")
+    TrackMetrics(params=params, finalstate=final_state, filename="test_metrics.csv")
 )
 basf2.process(main)
