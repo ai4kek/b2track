@@ -62,7 +62,7 @@ si.add_simulation(
     bkgOverlay=True,
 )
 
-# Save output
+# Save all dataobjects
 main.add_module("RootOutput", outputFileName=f"dataset/{final_state}_sim.root")
 
 # Print modules in path

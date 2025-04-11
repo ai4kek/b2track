@@ -8,7 +8,7 @@
 # This file is licensed under LGPL-3.0, see LICENSE.md.                  #
 ##########################################################################
 
-import basf2 as b2
+import basf2
 import generators as ge
 import mdst
 import simulation as si
@@ -44,12 +44,12 @@ elif final_state in ["mu+mu-", "tau+tau-"]:
 else:
     raise ValueError(f"Unknown final_state: {final_state}.")
 
-# Save output
+# Save all dataobjects
 main.add_module("RootOutput", outputFileName=f"dataset/{final_state}_gen.root")
 
 # Print modules in path
-# b2.print_path(main)
+# basf2.print_path(main)
 
 # Run event loop
-b2.process(main)
-print(b2.statistics)
+basf2.process(main)
+print(basf2.statistics)

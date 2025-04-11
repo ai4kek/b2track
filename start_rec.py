@@ -10,7 +10,7 @@
 
 import basf2
 import mdst
-import tracking as trkx
+import tracking
 
 # Reproducibility
 basf2.set_random_seed(12345)
@@ -23,7 +23,7 @@ final_state = "mixed"
 main.add_module("RootInput", inputFileName=f"dataset/{final_state}_sim.root")
 
 # Add full tracking reconstuction
-trkx.add_tracking_reconstruction(
+tracking.add_tracking_reconstruction(
     path=main,
     components=None,
     pruneTracks=False,
@@ -79,7 +79,7 @@ mdst.add_mdst_output(
 # main.add_module("RootOutput", outputFileName=f"{final_state}_reco.root")
 
 # Print modules in path
-basf2.print_path(main)
+# basf2.print_path(main)
 
 # Run event loop
 basf2.process(main)
