@@ -53,10 +53,9 @@ def costheta_between_momenta(px1, py1, pz1, px2, py2, pz2):
 
 # ====================================================================================================
 
-# ## 2D
 
-
-# Functions to plot 2D ratios
+# 2D
+# Functions to Plot 2D Ratios
 def ratio_2D(
     numerator,
     denominator,
@@ -175,6 +174,8 @@ def ratio_2D(
                 print(i, ", ", j, ", r:", ratio[i][j])
                 print("n:", h_num[0][i][j], "\t d:", h_den[0][i][j])
 
+    # No need to plot the histograms
+    # fig.savefig(f"{figname}_hist")
     close(fig)
 
     # ==========
@@ -182,13 +183,13 @@ def ratio_2D(
 
     fig, ax = plt.subplots(figsize=figsize)
 
-    pc = ax.pcolorfast(
+    pc = ax.pcolormesh(
         h_num[1], h_num[2], ratio.T, cmap=cmap, vmin=vmin, vmax=vmax
     )  # , ratio.T)
-    ax.set_xlabel(xlbl, fontsize=20)
-    ax.set_ylabel(ylbl, fontsize=20)
-    plt.xticks(fontsize=16)
-    plt.yticks(fontsize=16)
+    ax.set_xlabel(xlbl, fontsize=16)
+    ax.set_ylabel(ylbl, fontsize=16)
+    plt.xticks(fontsize=14)
+    plt.yticks(fontsize=14)
 
     # Create colorbar
     cax = fig.add_axes(
@@ -200,7 +201,7 @@ def ratio_2D(
         ]
     )
     cbar = ax.figure.colorbar(pc, ax=ax, cax=cax)
-    cbar.ax.set_ylabel(cbar_label, va="bottom", fontsize=20, labelpad=25)
+    cbar.ax.set_ylabel(cbar_label, va="bottom", fontsize=16, labelpad=25)
 
     if size_text != None:
         texts = []
@@ -244,7 +245,7 @@ def ratio_2D(
                     xtxt, ytxt, s_text, color=colort, fontsize=size_text
                 )
 
-    plt.yticks(fontsize=16)
+    # plt.yticks(fontsize=16)
 
     if savefig:
         fig.savefig(figname)
@@ -257,13 +258,13 @@ def ratio_2D(
     if plotRatioErr:
         figE, axE = plt.subplots(figsize=figsize)
 
-        pc2 = axE.pcolorfast(
+        pc2 = axE.pcolormesh(
             h_num[1], h_num[2], err_ratio.T, cmap="binary", vmin=vminErr, vmax=vmaxErr
         )
-        axE.set_xlabel(xlbl, fontsize=20)
-        axE.set_ylabel(ylbl, fontsize=20)
-        plt.xticks(fontsize=16)
-        plt.yticks(fontsize=16)
+        axE.set_xlabel(xlbl, fontsize=16)
+        axE.set_ylabel(ylbl, fontsize=16)
+        plt.xticks(fontsize=14)
+        plt.yticks(fontsize=14)
 
         # Create colorbar
         cax = figE.add_axes(
@@ -275,7 +276,7 @@ def ratio_2D(
             ]
         )
         cbar = axE.figure.colorbar(pc2, ax=axE, cax=cax)
-        cbar.ax.set_ylabel("Error " + cbar_label, va="bottom", fontsize=20, labelpad=25)
+        cbar.ax.set_ylabel("Error " + cbar_label, va="bottom", fontsize=16, labelpad=25)
         if size_text != None:
             texts = []
             c_text = "darkcyan"
@@ -315,7 +316,7 @@ def ratio_2D(
                         fontsize=size_text,
                     )
 
-        plt.yticks(fontsize=16)
+        # plt.yticks(fontsize=16)
         if savefigerr:
             figE.savefig(errfigname)
         # if closefig:
@@ -557,10 +558,10 @@ def chargeasym_2D(
             vmin=vminErr,
             vmax=vmaxErr,
         )
-        axE.set_xlabel(xlbl, fontsize=20)
-        axE.set_ylabel(ylbl, fontsize=20)
-        plt.xticks(fontsize=16)
-        plt.yticks(fontsize=16)
+        axE.set_xlabel(xlbl, fontsize=16)
+        axE.set_ylabel(ylbl, fontsize=16)
+        plt.xticks(fontsize=14)
+        plt.yticks(fontsize=14)
 
         # Create colorbar
         cax = figE.add_axes(
@@ -634,7 +635,7 @@ def chargeasym_2D(
     )
 
 
-# Functions to plot 2D ratios
+# Functions to Plot 2D Ratios
 def normalized_2D(
     variable,
     x_var="mcCosTheta",
@@ -824,9 +825,8 @@ def normalized_2D(
     return x_val, y_val, h[1], h[2], nEntries, fig1, fig
 
 
-### 1D
-
-
+# 1D
+# Functions to Plot 1D Ratios
 def ratio_1D(
     numerator,
     denominator,

@@ -25,29 +25,22 @@ class TrackMetrics(basf2.Module):
         self.filename = filename or "tracking_metrics.csv"
 
     def initialize(self):
+
+        # related StoreArrays
         self.MCParticles = Belle2.PyStoreArray("MCParticles")
         self.Tracks = Belle2.PyStoreArray("Tracks")
 
-        self.RecoTracks = Belle2.PyStoreArray("RecoTracks")
-        self.RecoTracksToMCParticles = Belle2.PyStoreArray("RecoTracksToMCParticles")
-        self.CDCHits = Belle2.PyStoreArray("CDCHits")
-        self.SVDClusters = Belle2.PyStoreArray("SVDClusters")
-
-        # track finding efficiency and purity
+        # related counters
         self.matched_mc_particles = 0
         self.selected_mc_particles = 0
         self.matched_reco_tracks = 0
         self.selected_reco_tracks = 0
-
-        # hit efficiency and purity
-        self.total_recotracks_tracks = 0
 
         return 0
 
     def event(self):
 
         self.selected_reco_tracks += self.Tracks.getEntries()
-        self.total_recotracks_tracks += self.RecoTracks.getEntries()
 
         # loop over Tracks
         for track in self.Tracks:
@@ -82,8 +75,6 @@ class TrackMetrics(basf2.Module):
 
         print(f"\nTracking Efficiency: {efficiency:.4f}")
         print(f"Tracking Purity: {purity:.4f}")
-
-        print(f"\nTracking Purity: {self.total_recotracks_tracks:.4f}")
 
         # Save metrics and parameters
         row = {
@@ -131,15 +122,18 @@ class TrackingMetrics(basf2.Module):
         # ------ Hit Efficiency and Purity ------
 
         # related StoreArrays
-        # self.RecoTrack = Belle2.PyStoreArray('RecoTracks')
-        # self.cdchits = Belle2.PyStoreArray('CDCHits')
-        # self.svdclusters = Belle2.PyStoreArray('SVDClusters')
+        self.RecoTracks = Belle2.PyStoreArray("RecoTracks")
+        self.RecoTracksToMCParticles = Belle2.PyStoreArray("RecoTracksToMCParticles")
+        self.CDCHits = Belle2.PyStoreArray("CDCHits")
+        self.SVDClusters = Belle2.PyStoreArray("SVDClusters")
 
         # related counters
         # self.n_simCDCHits = 0, self.matched_simCDCHits = 0
         # self.n_recCDCHits = 0, self.matched_simCDCHits = 0
         # self.n_simSVDHits = 0, self.matched_simCDCHits = 0
         # self.n_recSVDHits = 0, self.matched_simCDCHits = 0
+
+        self.total_recotracks_tracks = 0
 
         return 0
 

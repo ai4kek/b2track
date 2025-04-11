@@ -8,7 +8,10 @@
 # This file is licensed under LGPL-3.0, see LICENSE.md.                  #
 ##########################################################################
 
-"""To run this script: basf2 tracking_performance.py -- -p mixed -i mixed_reco.root"""
+"""
+To run this script: 
+basf2 tracking_performance.py -- -p mixed -i dataset/mixed_mdst.root
+"""
 
 import os
 from argparse import ArgumentParser
@@ -180,8 +183,9 @@ def parse_args():
 def main(args):
 
     # Setup output file names
-    ntuple_file = f"{args.prefix}/ntuple.root"
-    histogram_file = f"{args.prefix}/histograms.root"
+    prefix = args.prefix
+    ntuple_file = f"{prefix}/{prefix}_ntuple.root"
+    histogram_file = f"{prefix}/{prefix}_hist.root"
 
     # Setup variable aliases
     setup_aliases()
@@ -199,7 +203,7 @@ def main(args):
     else:
         filelist = [b2.find_file(input_file, "examples", False)]
 
-    # Input the mdst
+    # Input the mDST
     ma.inputMdstList(filelist=filelist, environmentType="default", path=main)
 
     # Create particle lists

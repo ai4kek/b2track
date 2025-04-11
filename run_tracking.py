@@ -9,9 +9,8 @@
 ##########################################################################
 
 import basf2
-from ROOT import Belle2
 import mdst
-import tracking as trkx
+import tracking
 import json
 from src.tracking_metrics import TrackMetrics as TrackingMetrics
 
@@ -25,13 +24,51 @@ final_state = "mixed"
 main.add_module("RootInput", inputFileName=f"dataset/{final_state}_sim.root")
 
 # Tracking reconstruction
-trkx.add_tracking_reconstruction(
+tracking.add_tracking_reconstruction(
     path=main,
     components=None,
     pruneTracks=False,
     mcTrackFinding=False,
     skipGeometryAdding=False,
 )
+
+# SVD Tracking with ToCDCCKF
+main.add_module("SetupGenfitExtrapolation", energyLossBrems=False, noiseBrems=False)
+
+svd.add_svd_reconstruction(main)
+add_vxd_track_finding_vxdtf2(main, reco_tracks="RecoTracksSVD", components=["SVD"])
+main.add_module("DAFRecoFitter", recoTracksStoreArrayName="RecoTracksSVD")
+
+main.add_module(
+    "TFCDC_WireHitPreparer",
+    wirePosition="aligned",
+    useSecondHits=False,
+    flightTimeEstimation="outwards",
+)
+main.add_module(
+    "ToCDCCKF",
+    inputWireHits="CDCWireHitVector",
+    inputRecoTrackStoreArrayName="RecoTracksSVD",
+    relatedRecoTrackStoreArrayName="CKFCDCRecoTracks",
+    relationCheckForDirection="backward",
+    outputRecoTrackStoreArrayName="CKFCDCRecoTracks",
+    outputRelationRecoTrackStoreArrayName="RecoTracksSVD",
+    writeOutDirection="backward",
+    stateBasicFilterParameters={"maximalHitDistance": 0.75},
+    stateExtrapolationFilterParameters={"direction": "forward"},
+    pathFilter="arc_length",
+)
+
+main.add_module(
+    "RelatedTracksCombiner",
+    CDCRecoTracksStoreArrayName="CKFCDCRecoTracks",
+    VXDRecoTracksStoreArrayName="RecoTracksSVD",
+    recoTracksStoreArrayName="RecoTracks",
+)
+
+main.add_module("DAFRecoFitter", recoTracksStoreArrayName="RecoTracks")
+
+main.add_module("TrackCreator", recoTrackColName="RecoTracks")
 
 # Load ToCDCCKF parameter set
 with open("current_params.json", "r") as f:
@@ -50,3 +87,21 @@ main.add_module(
 
 basf2.process(main)
 print(basf2.statistics)
+
+
+def main():
+    basf2.set_random_seed(1337)
+    validation_run = toCDCCKFValidationBkg()
+    validation_run.configure_and_execute_from_commandline()
+
+
+if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
+    if ACTIVE:
+        main()
+    else:
+        print(
+            "This validation deactivated and thus basf2 is not executed.\n"
+            "If you want to run this validation, please set the 'ACTIVE' flag above to 'True'.\n"
+            "Exiting."
+        )

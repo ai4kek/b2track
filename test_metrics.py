@@ -24,7 +24,7 @@ basf2.set_random_seed(12345)
 main = basf2.Path()
 
 final_state = "mixed"
-main.add_module("RootInput", inputFileName=f"dataset/{final_state}_reco.root")
+main.add_module("RootInput", inputFileName=f"dataset/{final_state}_mdst.root")
 
 # TrackingMetrics Module
 params = {"trial": 1, "param1": 1.0, "param2": 0.25, "myTag": "experimentA"}

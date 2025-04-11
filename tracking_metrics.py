@@ -8,7 +8,10 @@
 # This file is licensed under LGPL-3.0, see LICENSE.md.                  #
 ##########################################################################
 
-""" To run this script: basf2 tracking_metrics.py -- -f1 mixed/ntuple.root -p1 mixed"""
+"""
+To run this script: 
+basf2 tracking_metrics.py -- -f1 mixed/mixed_ntuple.root -p1 mixed
+"""
 
 import argparse
 import math
@@ -364,6 +367,9 @@ def plots(rootfile, sample="test", seen=True, savefig=True, figsize=(14, 10)):
         percent=True,
         closefig=False,
     )
+
+    print("ratio (overall):", f"{roverall:.6f} +- {err_roverall:.6f}")
+
     (
         dictionary["FE_overall"],
         dictionary["err_FE_overall"],
@@ -373,7 +379,7 @@ def plots(rootfile, sample="test", seen=True, savefig=True, figsize=(14, 10)):
     figs.append(fig)
     data.append([roverall, err_roverall])
     # rows.append('FE')
-    rows.append("Finding Efficiency")
+    rows.append("Finding Efficiency (Overall)")
 
     # charge efficiency
     print("charge efficiency")
