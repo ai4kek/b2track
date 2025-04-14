@@ -367,9 +367,6 @@ def plots(rootfile, sample="test", seen=True, savefig=True, figsize=(14, 10)):
         percent=True,
         closefig=False,
     )
-
-    print("ratio (overall):", f"{roverall:.6f} +- {err_roverall:.6f}")
-
     (
         dictionary["FE_overall"],
         dictionary["err_FE_overall"],

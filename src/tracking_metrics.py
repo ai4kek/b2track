@@ -49,16 +49,38 @@ class TrackMetrics(basf2.Module):
 
         # loop over Particles
         for mc in self.MCParticles:
-            isSelected = (
-                abs(mc.getPDG()) == 211
-                and mc.hasStatus(1)
-                and mc.hasSeenInDetector(Belle2.Const.DetectorSet(Belle2.Const.CDC))
+
+            # only charged pions
+            isChargedPion = abs(mc.getPDG()) == 211
+
+            # only primary particles
+            isPrimarySignal = mc.isPrimaryParticle() == 1
+
+            # only seen in SVD
+            isSeenInSVD = mc.hasSeenInDetector(
+                Belle2.Const.DetectorSet(Belle2.Const.SVD)
             )
 
+            # only seen in CDC
+            isSeenInCDC = mc.hasSeenInDetector(
+                Belle2.Const.DetectorSet(Belle2.Const.CDC)
+            )
+
+            # seen in SVD or CDC
+            isSeenInDetectors = isSeenInSVD or isSeenInCDC
+
+            # final selection
+            isSelected = isChargedPion and isPrimarySignal and isSeenInDetectors
+
             if isSelected:
-                self.selected_mc_particles += 1
+                self.selected_mc_particles += (
+                    1  # Same counts as from Tracking Validation
+                )
                 if mc.getRelated("Tracks"):
-                    self.matched_mc_particles += 1
+                    # FIXME: How to check fake/clone tracks?
+                    self.matched_mc_particles += (
+                        1  # 24 more counts compared to Tracking Validation
+                    )
         return 0
 
     def terminate(self):
@@ -123,7 +145,6 @@ class TrackingMetrics(basf2.Module):
 
         # related StoreArrays
         self.RecoTracks = Belle2.PyStoreArray("RecoTracks")
-        self.RecoTracksToMCParticles = Belle2.PyStoreArray("RecoTracksToMCParticles")
         self.CDCHits = Belle2.PyStoreArray("CDCHits")
         self.SVDClusters = Belle2.PyStoreArray("SVDClusters")
 
@@ -168,34 +189,61 @@ class TrackingMetrics(basf2.Module):
         # Count matched MC Particles
         for mc in self.MCParticles:
 
-            # particle selection criteria
-            isChargedPion = abs(mc.getPDG()) == 211  # only charged pions
+            # query selection
             isCharged = mc.getCharge() != 0  # only charged particles
-            isPrimary = mc.hasStatus(1)  # only primary particles
+            isChargedPion = abs(mc.getPDG()) == 211  # only charged pions
+            isPrimarySignal = mc.hasStatus(1)  # only primary particles
             isStable = mc.hasStatus(2)  # only stable particles
-            isSeen = mc.hasSeenInDetector(  # only seen in CDC
+
+            # only primary particles (via function)
+            # isPrimarySignal = mc.isPrimaryParticle() == 1
+
+            # only primary process (0: primary, -1: otherwise)
+            secPhyProc = mc.getSecondaryPhysicsProcess() == 0
+
+            # check if status and function gives the same results
+            # assert mc.hasStatus(1) == (mc.isPrimaryParticle()), "Mismatch b/w hasStatus(1) and isPrimaryParticle()"
+
+            # only seen in SVD
+            isSeenInSVD = mc.hasSeenInDetector(
+                Belle2.Const.DetectorSet(Belle2.Const.SVD)
+            )
+
+            # only seen in CDC
+            isSeenInCDC = mc.hasSeenInDetector(
                 Belle2.Const.DetectorSet(Belle2.Const.CDC)
             )
-            notSecPhyProc = mc.getSecondaryPhysicsProcess() == 0  # only primary process
 
-            # Primary, charged pions seen in CDC
-            isSelected = isPrimary and isChargedPion and isSeen and notSecPhyProc
+            # final selection
+            # isPrimarySignal := "isPrimarySignal==1" (analysis)
+            # isSeenInDetectors := "seenInSVD==1 or seenInCDC==1" (analysis)
+            # isSelected := "isPrimarySignal==1 and (seenInSVD==1 or seenInCDC==1)" (analysis)
+            isPrimarySignal = mc.isPrimaryParticle() == 1
+            isSeenInDetectors = isSeenInSVD or isSeenInCDC
+            isSelected = isChargedPion and isPrimarySignal and isSeenInDetectors
 
+            # apply final selection (matched to analysis track validation)
             if isSelected:
 
                 # count selected particles
                 self.selected_mc_particles += 1
 
-                # count selected and matched particles
-                # particle_to_track_relation = mc.getRelationsFrom("Tracks")
-                # particle_to_track_relation = mc.getRelatedFrom("Tracks")
-                particle_to_track_relation = mc.getRelated("Tracks")
+                # FIXME: The matched counts are 24 more than the analysis track
+                # validation, in analysis we have extra flags of isCloneTrack,
+                # and mcSecPhysProc==0. One need to find similar flags here.
 
-                # it relation exists (not nullptr), there might a better way to check
+                # count selected and matched particles
+                # particle_to_track_relation = mc.getRelationsFromWithWeights("Tracks")
+                # particle_to_track_relation = mc.getRelatedFrom("Tracks")
+                particle_to_track_relation = mc.getRelatedWithWeight("Tracks")
+
+                # it relation exists (not nullptr)
                 if particle_to_track_relation:
                     # Since its a Track object, we can see more info:
 
-                    # print(f"Track Quality Indicator: {particle_to_track_relation.getQualityIndicator()}")
+                    print(
+                        f"Track Quality Indicator: {particle_to_track_relation.getQualityIndicator()}"
+                    )
                     # print(f"Fitted Hypothesis: {particle_to_track_relation.getNumberOfFittedHypotheses()}")
 
                     self.matched_mc_particles += 1
@@ -215,7 +263,7 @@ class TrackingMetrics(basf2.Module):
         print(f"\nTracking Efficiency: {efficiency:.4f}")
         print(f"Matched MC particles: {self.matched_mc_particles}")
         print(f"Selected MC particles: {self.selected_mc_particles}")
-        print(f"Total MC particles: {self.total_mc_particles}")
+        # print(f"Total MC particles: {self.total_mc_particles}")
 
         # tracking purity
         purity = 0
