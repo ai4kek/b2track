@@ -23,7 +23,7 @@ main = basf2.Path()
 final_state = "mixed"
 main.add_module("RootInput", inputFileName=f"dataset/{final_state}_sim.root")
 
-# Tracking reconstruction
+# Add full tracking reconstuction
 tracking.add_tracking_reconstruction(
     path=main,
     components=None,
@@ -31,44 +31,6 @@ tracking.add_tracking_reconstruction(
     mcTrackFinding=False,
     skipGeometryAdding=False,
 )
-
-# SVD Tracking with ToCDCCKF
-main.add_module("SetupGenfitExtrapolation", energyLossBrems=False, noiseBrems=False)
-
-svd.add_svd_reconstruction(main)
-add_vxd_track_finding_vxdtf2(main, reco_tracks="RecoTracksSVD", components=["SVD"])
-main.add_module("DAFRecoFitter", recoTracksStoreArrayName="RecoTracksSVD")
-
-main.add_module(
-    "TFCDC_WireHitPreparer",
-    wirePosition="aligned",
-    useSecondHits=False,
-    flightTimeEstimation="outwards",
-)
-main.add_module(
-    "ToCDCCKF",
-    inputWireHits="CDCWireHitVector",
-    inputRecoTrackStoreArrayName="RecoTracksSVD",
-    relatedRecoTrackStoreArrayName="CKFCDCRecoTracks",
-    relationCheckForDirection="backward",
-    outputRecoTrackStoreArrayName="CKFCDCRecoTracks",
-    outputRelationRecoTrackStoreArrayName="RecoTracksSVD",
-    writeOutDirection="backward",
-    stateBasicFilterParameters={"maximalHitDistance": 0.75},
-    stateExtrapolationFilterParameters={"direction": "forward"},
-    pathFilter="arc_length",
-)
-
-main.add_module(
-    "RelatedTracksCombiner",
-    CDCRecoTracksStoreArrayName="CKFCDCRecoTracks",
-    VXDRecoTracksStoreArrayName="RecoTracksSVD",
-    recoTracksStoreArrayName="RecoTracks",
-)
-
-main.add_module("DAFRecoFitter", recoTracksStoreArrayName="RecoTracks")
-
-main.add_module("TrackCreator", recoTrackColName="RecoTracks")
 
 # Load ToCDCCKF parameter set
 with open("current_params.json", "r") as f:
@@ -78,30 +40,14 @@ with open("current_params.json", "r") as f:
 basf2.set_module_parameters(main, name="ToCDCCKF", recursive=True, **params)
 
 # Calculate tracking metrics
-main.add_module(
-    TrackingMetrics(params=params, finalstate=final_state, filename="metrics.csv")
-)
+metrics = TrackingMetrics(params, final_state, filename="metrics.csv")
+main.add_module(metrics)
 
-# Add mDST output (not required for search)
-# mdst.add_mdst_output(main, mc=True, filename=f"{final_state}_rec.root")
+# Save mDST dataobjects (not required for search)
+# mdst.add_mdst_output(main, mc=True, filename=f"{dataset/{final_state}_mds.root")
+
+# Save all dataobjects (not required for search)
+# main.add_module("RootOutput", outputFileName=f"dataset/{final_state}_reco.root")
 
 basf2.process(main)
-print(basf2.statistics)
-
-
-def main():
-    basf2.set_random_seed(1337)
-    validation_run = toCDCCKFValidationBkg()
-    validation_run.configure_and_execute_from_commandline()
-
-
-if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO)
-    if ACTIVE:
-        main()
-    else:
-        print(
-            "This validation deactivated and thus basf2 is not executed.\n"
-            "If you want to run this validation, please set the 'ACTIVE' flag above to 'True'.\n"
-            "Exiting."
-        )
+# print(basf2.statistics)

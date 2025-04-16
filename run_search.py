@@ -11,10 +11,13 @@
 import subprocess
 import random
 import json
+import time
+import csv
+import os
 
 # Define your parameter search space
 
-params_1 = {
+params = {
     # "filter": "size",
     # "pathFilter": "arc_length",
     # "filterParameters": {},
@@ -53,5 +56,29 @@ for trial in range(num_trials):
     with open("current_params.json", "w") as f:
         json.dump(params, f, indent=2)
 
-    # Run basf2 script
+    # Run basf2 script and measure execution time
+    start_time = time.time()
     subprocess.run(["basf2", "run_tracking.py"])
+    execution_time = time.time() - start_time
+    print(f"Trial execution time: {execution_time:.2f} seconds")
+
+    # Update metrics.csv with execution time
+    metrics_file = "metrics.csv"
+    if os.path.exists(metrics_file):
+        # Read the last line to update it with execution time
+        with open(metrics_file, "r") as f:
+            lines = f.readlines()
+            if len(lines) > 1:  # Has header and at least one data row
+                header = lines[0].strip().split(",")
+                last_row = lines[-1].strip().split(",")
+
+                # Create dict from last row
+                row_dict = dict(zip(header, last_row))
+                row_dict["execution_time"] = f"{execution_time:.2f}"
+
+                # Write back all lines except last
+                with open(metrics_file, "w") as f:
+                    f.writelines(lines[:-1])
+                    # Write updated last row
+                    writer = csv.DictWriter(f, fieldnames=row_dict.keys())
+                    writer.writerow(row_dict)

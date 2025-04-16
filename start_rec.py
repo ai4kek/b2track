@@ -71,16 +71,16 @@ additional_br = [
 mdst.add_mdst_output(
     path=main,
     mc=True,
-    filename=f"dataset/{final_state}_reco.root",
+    filename=f"dataset/{final_state}_mdst.root",
     additionalBranches=additional_br,
 )
 
 # Save all dataobjects
-# main.add_module("RootOutput", outputFileName=f"{final_state}_reco.root")
+# main.add_module("RootOutput", outputFileName=f"dataset/{final_state}_reco.root")
 
 # Print modules in path
 # basf2.print_path(main)
 
 # Run event loop
 basf2.process(main)
-print(basf2.statistics)
+# print(basf2.statistics)
