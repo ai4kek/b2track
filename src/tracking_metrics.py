@@ -54,7 +54,12 @@ class TrackMetrics(basf2.Module):
             isChargedPion = abs(mc.getPDG()) == 211
 
             # only primary particles
-            isPrimarySignal = mc.isPrimaryParticle() == 1
+            # isPrimary = mc.hasStatus(1)
+            isPrimary = mc.hasStatus(Belle2.MCParticle.c_PrimaryParticle)
+
+            # only stable particles
+            # isStable = mc.hasStatus(2)
+            isStable = mc.hasStatus(Belle2.MCParticle.c_StableInGenerator)
 
             # only seen in SVD
             isSeenInSVD = mc.hasSeenInDetector(
@@ -70,13 +75,16 @@ class TrackMetrics(basf2.Module):
             isSeenInDetectors = isSeenInSVD or isSeenInCDC
 
             # final selection
-            isSelected = isChargedPion and isPrimarySignal and isSeenInDetectors
+            isSelected = isChargedPion and isPrimary and isSeenInDetectors and isStable
 
             if isSelected:
                 self.selected_mc_particles += (
                     1  # Same counts as from Tracking Validation
                 )
-                if mc.getRelated("Tracks"):
+
+                mc_to_track = mc.getRelated("Tracks")
+                # print(mc.getRelatedWithWeight("Tracks"))
+                if mc_to_track:
                     # FIXME: How to check fake/clone tracks?
                     self.matched_mc_particles += (
                         1  # 24 more counts compared to Tracking Validation
@@ -84,6 +92,8 @@ class TrackMetrics(basf2.Module):
         return 0
 
     def terminate(self):
+
+        # calculate meterics
         efficiency = (
             self.matched_mc_particles / self.selected_mc_particles
             if self.selected_mc_particles > 0
@@ -95,8 +105,7 @@ class TrackMetrics(basf2.Module):
             else 0
         )
 
-        print(f"\nTracking Efficiency: {efficiency:.4f}")
-        print(f"Tracking Purity: {purity:.4f}")
+        print(f"\nTracking Efficiency: {efficiency:.4f}, Tracking Purity: {purity:.4f}")
 
         # Save metrics and parameters
         row = {
@@ -149,10 +158,10 @@ class TrackingMetrics(basf2.Module):
         self.SVDClusters = Belle2.PyStoreArray("SVDClusters")
 
         # related counters
-        # self.n_simCDCHits = 0, self.matched_simCDCHits = 0
-        # self.n_recCDCHits = 0, self.matched_simCDCHits = 0
-        # self.n_simSVDHits = 0, self.matched_simCDCHits = 0
-        # self.n_recSVDHits = 0, self.matched_simCDCHits = 0
+        # self.selected_simCDCHits = 0, self.matched_simCDCHits = 0
+        # self.selected_recCDCHits = 0, self.matched_simCDCHits = 0
+        # self.selected_simSVDHits = 0, self.matched_simCDCHits = 0
+        # self.selected_recSVDHits = 0, self.matched_simCDCHits = 0
 
         self.total_recotracks_tracks = 0
 
@@ -192,17 +201,21 @@ class TrackingMetrics(basf2.Module):
             # query selection
             isCharged = mc.getCharge() != 0  # only charged particles
             isChargedPion = abs(mc.getPDG()) == 211  # only charged pions
-            isPrimarySignal = mc.hasStatus(1)  # only primary particles
-            isStable = mc.hasStatus(2)  # only stable particles
 
-            # only primary particles (via function)
-            # isPrimarySignal = mc.isPrimaryParticle() == 1
-
-            # only primary process (0: primary, -1: otherwise)
-            secPhyProc = mc.getSecondaryPhysicsProcess() == 0
+            # only primary particles
+            # isPrimary = mc.isPrimaryParticle() == 1
+            # isPrimary = mc.hasStatus(1)
+            isPrimary = mc.hasStatus(Belle2.MCParticle.c_PrimaryParticle)
 
             # check if status and function gives the same results
             # assert mc.hasStatus(1) == (mc.isPrimaryParticle()), "Mismatch b/w hasStatus(1) and isPrimaryParticle()"
+
+            # only stable particles
+            # isStable = mc.hasStatus(2)
+            isStable = mc.hasStatus(Belle2.MCParticle.c_StableInGenerator)
+
+            # only primary process (0: primary, -1: otherwise)
+            secPhyProc = mc.getSecondaryPhysicsProcess() == 0
 
             # only seen in SVD
             isSeenInSVD = mc.hasSeenInDetector(
@@ -255,7 +268,7 @@ class TrackingMetrics(basf2.Module):
     def terminate(self):
         """terminate"""
 
-        # tracking efficiency
+        # calculate tracking efficiency
         efficiency = 0
         if self.total_mc_particles > 0:
             efficiency = self.matched_mc_particles / self.selected_mc_particles
@@ -265,7 +278,7 @@ class TrackingMetrics(basf2.Module):
         print(f"Selected MC particles: {self.selected_mc_particles}")
         # print(f"Total MC particles: {self.total_mc_particles}")
 
-        # tracking purity
+        # calculate tracking purity
         purity = 0
         if self.selected_reco_tracks > 0:
             purity = self.matched_reco_tracks / self.selected_reco_tracks
@@ -274,7 +287,7 @@ class TrackingMetrics(basf2.Module):
         print(f"Matched reconstructed tracks: {self.matched_reco_tracks}")
         print(f"Selected reconstructed tracks: {self.selected_reco_tracks}")
 
-        # save results to CSV
+        # save metrics
         self.save_metrics(efficiency, purity)
 
         return 0
