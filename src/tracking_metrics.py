@@ -74,21 +74,23 @@ class TrackMetrics(basf2.Module):
             # seen in SVD or CDC
             isSeenInDetectors = isSeenInSVD or isSeenInCDC
 
-            # final selection
+            # final selection (isPrimary := isPrimarySignal)
             isSelected = isChargedPion and isPrimary and isSeenInDetectors and isStable
 
             if isSelected:
-                self.selected_mc_particles += (
-                    1  # Same counts as from Tracking Validation
-                )
 
-                mc_to_track = mc.getRelated("Tracks")
-                # print(mc.getRelatedWithWeight("Tracks"))
-                if mc_to_track:
-                    # FIXME: How to check fake/clone tracks?
-                    self.matched_mc_particles += (
-                        1  # 24 more counts compared to Tracking Validation
-                    )
+                # count selected particles
+                self.selected_mc_particles += 1
+
+                # query related Tracks
+                # particle_to_track_relation = mc.getRelatedFrom("Tracks")
+                particle_to_track_relation, weight = mc.getRelatedFromWithWeight[
+                    Belle2.MCParticle
+                ]("Tracks")
+
+                # count matched particles
+                if particle_to_track_relation:  #  and weight > 0.:
+                    self.matched_mc_particles += 1
         return 0
 
     def terminate(self):
@@ -228,7 +230,7 @@ class TrackingMetrics(basf2.Module):
             )
 
             # final selection
-            # isPrimarySignal := "isPrimarySignal==1" (analysis)
+            # isPrimary := "isPrimarySignal==1" (analysis)
             # isSeenInDetectors := "seenInSVD==1 or seenInCDC==1" (analysis)
             # isSelected := "isPrimarySignal==1 and (seenInSVD==1 or seenInCDC==1)" (analysis)
             isPrimarySignal = mc.isPrimaryParticle() == 1
@@ -246,19 +248,15 @@ class TrackingMetrics(basf2.Module):
                 # and mcSecPhysProc==0. One need to find similar flags here.
 
                 # count selected and matched particles
-                # particle_to_track_relation = mc.getRelationsFromWithWeights("Tracks")
+                # particle_to_track_relation = mc.getRelationsFrom("Tracks")
                 # particle_to_track_relation = mc.getRelatedFrom("Tracks")
-                particle_to_track_relation = mc.getRelatedWithWeight("Tracks")
+                particle_to_track_relation = mc.getRelated("Tracks")
+
+                # Get relation with a weight
+                # particle_to_track_relation, weight = mc.getRelatedWithWeight[Belle2.MCParticle]("Tracks")
 
                 # it relation exists (not nullptr)
                 if particle_to_track_relation:
-                    # Since its a Track object, we can see more info:
-
-                    print(
-                        f"Track Quality Indicator: {particle_to_track_relation.getQualityIndicator()}"
-                    )
-                    # print(f"Fitted Hypothesis: {particle_to_track_relation.getNumberOfFittedHypotheses()}")
-
                     self.matched_mc_particles += 1
 
         # TODO: Find Hit Efficiency & Purity: RecoTracks, CDCHits & SVDClusters
