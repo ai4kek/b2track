@@ -8,6 +8,9 @@
 # This file is licensed under LGPL-3.0, see LICENSE.md.                  #
 ##########################################################################
 
+# Intended to run with run_search.py script as a subprocess for different
+# trails with specific params. For just tracking, run the start_rec.py.
+
 import basf2
 import mdst
 import tracking
@@ -25,15 +28,11 @@ main = basf2.Path()
 final_state = "mixed"
 main.add_module("RootInput", inputFileName=f"dataset/{final_state}_sim.root")
 
-# Full Tracking reconstruction
-# tracking.add_tracking_reconstruction(
-#    path=main
-# )
-
 main.add_module("Gearbox")
 main.add_module("Geometry")
 
-# SVD Tracking with ToCDCCKF
+
+# SVD-only Tracking with ToCDCCKF
 main.add_module("SetupGenfitExtrapolation", energyLossBrems=False, noiseBrems=False)
 
 svd.add_svd_reconstruction(main)
@@ -71,24 +70,23 @@ main.add_module("DAFRecoFitter", recoTracksStoreArrayName="RecoTracks")
 
 main.add_module("TrackCreator", recoTrackColName="RecoTracks")
 
+
 # Load ToCDCCKF parameter set
 with open("current_params.json", "r") as f:
     params = json.load(f)
 
 # Inject parameters into ToCDCCKF
-# basf2.set_module_parameters(main, name="ToCDCCKF", recursive=True, **params)
+basf2.set_module_parameters(main, name="ToCDCCKF", recursive=True, **params)
 
 # Calculate tracking metrics
-main.add_module(
-    TrackingMetrics(params=params, finalstate=final_state, filename="metrics.csv")
-)
+metrics = TrackingMetrics(params, final_state, filename="metrics.csv")
+main.add_module(metrics)
 
-# Add mDST output (not required for search)
-# mdst.add_mdst_output(main, mc=True, filename=f"{dataset/{final_state}_mdst_svd.root")
+# Save mDST dataobjects (not required for search)
+# mdst.add_mdst_output(main, mc=True, filename=f"{dataset/{final_state}_mds.root")
 
-# Save all dataobjects
-main.add_module("RootOutput", outputFileName=f"dataset/{final_state}_reco_svd.root")
-
+# Save all dataobjects (not required for search)
+# main.add_module("RootOutput", outputFileName=f"dataset/{final_state}_reco.root")
 
 basf2.process(main)
-print(basf2.statistics)
+# print(basf2.statistics)
