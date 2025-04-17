@@ -25,8 +25,8 @@ basf2.set_random_seed(12345)
 # Steering Path
 main = basf2.Path()
 
-final_state = "mixed"
-main.add_module("RootInput", inputFileName=f"dataset/{final_state}_sim.root")
+finalstate = "mixed"
+main.add_module("RootInput", inputFileName=f"dataset/{finalstate}_sim.root")
 
 main.add_module("Gearbox")
 main.add_module("Geometry")
@@ -72,21 +72,21 @@ main.add_module("TrackCreator", recoTrackColName="RecoTracks")
 
 
 # Load ToCDCCKF parameter set
-with open("current_params.json", "r") as f:
+with open("params.json", "r") as f:
     params = json.load(f)
 
 # Inject parameters into ToCDCCKF
 basf2.set_module_parameters(main, name="ToCDCCKF", recursive=True, **params)
 
 # Calculate tracking metrics
-metrics = TrackingMetrics(params, final_state, filename="metrics.csv")
+metrics = TrackingMetrics(params, finalstate, filename="metrics.csv")
 main.add_module(metrics)
 
 # Save mDST dataobjects (not required for search)
-# mdst.add_mdst_output(main, mc=True, filename=f"{dataset/{final_state}_mds.root")
+# mdst.add_mdst_output(main, mc=True, filename=f"{dataset/{finalstate}_mds.root")
 
 # Save all dataobjects (not required for search)
-# main.add_module("RootOutput", outputFileName=f"dataset/{final_state}_reco.root")
+# main.add_module("RootOutput", outputFileName=f"dataset/{finalstate}_reco.root")
 
 basf2.process(main)
 # print(basf2.statistics)

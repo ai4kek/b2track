@@ -22,7 +22,7 @@ class TrackMetrics(basf2.Module):
         super().__init__()
         self.params = params or {}
         self.finalstate = finalstate or "unknown"
-        self.filename = filename or "tracking_metrics.csv"
+        self.filename = filename or "metrics.csv"
 
     def initialize(self):
 
@@ -115,6 +115,7 @@ class TrackMetrics(basf2.Module):
             "efficiency": efficiency,
             "purity": purity,
             "finalstate": self.finalstate,
+            "execution_time": "",  # Leave empty for run_search.py to fill
         }
 
         file_exists = os.path.exists(self.filename)

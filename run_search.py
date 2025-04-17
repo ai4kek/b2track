@@ -8,36 +8,24 @@
 # This file is licensed under LGPL-3.0, see LICENSE.md.                  #
 ##########################################################################
 
-import subprocess
-import random
+import os
 import json
 import time
+import subprocess
+import random
 import csv
-import os
+from pathlib import Path
 
-# Define your parameter search space
+# Number of trials
+NUM_TRIALS = 10
 
-params = {
-    # "filter": "size",
-    # "pathFilter": "arc_length",
-    # "filterParameters": {},
-    # "pathFilterParameters": {},
-    # "stateBasicFilterParameters": {'maximalHitDistance': 0.15},
-    # "stateExtrapolationFilterParameters": {},
-    # "stateFinalFilterParameters": {},
-    # "statePreFilterParameters": {},
-    "exportAllTracks": False,  #
-    "exportTracks": True,  #
-    "ignoreTracksWithCDChits": True,  #
-    "setTakenFlag": True,  #
-}
-
-search_space = {
-    "maximalDeltaPhi": [0.2, 0.3, 0.4, 0.5],
-    "maximalLayerJump": [3, 4, 5],
+# Parameter search space
+SEARCH_SPACE = {
+    "maximalDeltaPhi": [0.2, 0.3, 0.4],
+    "maximalLayerJump": [2, 4, 6],
     "minimalPtRequirement": [0.0, 0.1],
-    "pathMaximalCandidatesInFlight": [2, 3, 4],
-    "stateMaximalHitCandidates": [3, 4, 5],
+    "pathMaximalCandidatesInFlight": [2, 3],
+    "stateMaximalHitCandidates": [3, 4],
 }
 
 
@@ -45,40 +33,51 @@ def get_random_params(space):
     return {k: random.choice(v) for k, v in space.items()}
 
 
-# Number of trials
-num_trials = 10
+# Results CSV path
+results_path = Path("metrics.csv")
 
-for trial in range(num_trials):
-    print(f"\nTrial {trial + 1}/{num_trials}")
-    params = get_random_params(search_space)
+# Write CSV header if it doesn't exist
+if not results_path.exists():
+    with results_path.open(mode="w", newline="") as f:
+        writer = csv.writer(f)
+        header = list(SEARCH_SPACE.keys()) + [
+            "efficiency",
+            "purity",
+            "finalstate",
+            "execution_time",
+        ]
+        writer.writerow(header)
+
+# Run trials
+for trial in range(NUM_TRIALS):
+    print(f"\nTrial {trial + 1}/{NUM_TRIALS}")
+
+    # Randomly sample params
+    params = get_random_params(SEARCH_SPACE)
 
     # Save to JSON
-    with open("current_params.json", "w") as f:
+    with open("params.json", "w") as f:
         json.dump(params, f, indent=2)
 
-    # Run basf2 script and measure execution time
+    # Run tracking script and time it
     start_time = time.time()
-    subprocess.run(["basf2", "run_tracking.py"])
-    execution_time = time.time() - start_time
-    print(f"Trial execution time: {execution_time:.2f} seconds")
+    subprocess.run(["basf2", "run_tracking_svd.py"])
+    elapsed_time = time.time() - start_time
 
-    # Update metrics.csv with execution time
-    metrics_file = "metrics.csv"
-    if os.path.exists(metrics_file):
-        # Read the last line to update it with execution time
-        with open(metrics_file, "r") as f:
-            lines = f.readlines()
-            if len(lines) > 1:  # Has header and at least one data row
-                header = lines[0].strip().split(",")
-                last_row = lines[-1].strip().split(",")
+    print(f"[INFO] Execution time: {elapsed_time:.2f} seconds")
 
-                # Create dict from last row
-                row_dict = dict(zip(header, last_row))
-                row_dict["execution_time"] = f"{execution_time:.2f}"
+    # Read and update last row in CSV
+    with results_path.open(newline="") as f:
+        rows = list(csv.DictReader(f))
 
-                # Write back all lines except last
-                with open(metrics_file, "w") as f:
-                    f.writelines(lines[:-1])
-                    # Write updated last row
-                    writer = csv.DictWriter(f, fieldnames=row_dict.keys())
-                    writer.writerow(row_dict)
+    if not rows:
+        print(f"[ERROR] No rows found in {results_path}")
+        continue
+
+    rows[-1]["execution_time"] = round(elapsed_time, 2)
+
+    # Write back with updated execution time
+    with results_path.open("w", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=rows[0].keys())
+        writer.writeheader()
+        writer.writerows(rows)

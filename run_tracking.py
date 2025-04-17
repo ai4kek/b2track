@@ -23,8 +23,8 @@ basf2.set_random_seed(12345)
 # Steering Path
 main = basf2.Path()
 
-final_state = "mixed"
-main.add_module("RootInput", inputFileName=f"dataset/{final_state}_sim.root")
+finalstate = "mixed"
+main.add_module("RootInput", inputFileName=f"dataset/{finalstate}_sim.root")
 
 # Add full tracking reconstuction
 tracking.add_tracking_reconstruction(
@@ -36,14 +36,14 @@ tracking.add_tracking_reconstruction(
 )
 
 # Load ToCDCCKF parameter set
-with open("current_params.json", "r") as f:
+with open("params.json", "r") as f:
     params = json.load(f)
 
 # Inject parameters into ToCDCCKF
 basf2.set_module_parameters(main, name="ToCDCCKF", recursive=True, **params)
 
 # Calculate tracking metrics
-metrics = TrackingMetrics(params, final_state, filename="metrics.csv")
+metrics = TrackingMetrics(params, finalstate, filename="metrics.csv")
 main.add_module(metrics)
 
 # Save mDST dataobjects (not required for search)
