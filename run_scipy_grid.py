@@ -1,3 +1,13 @@
+#!/usr/bin/env python3
+
+##########################################################################
+# basf2 (Belle II Analysis Software Framework)                           #
+# Author: The Belle II Collaboration                                     #
+#                                                                        #
+# See git log for contributors and copyright holders.                    #
+# This file is licensed under LGPL-3.0, see LICENSE.md.                  #
+##########################################################################
+
 """
 Grid Search for Belle II Tracking Parameters
 
@@ -11,10 +21,6 @@ trial, maximalDeltaPhi, maximalLayerJump, ..., efficiency, purity, f1_score, exe
 Usage:
 -------
     python run_gridsearch.py
-
-Author:
--------
-ChatGPT (updated for metrics.csv style)
 """
 
 import itertools

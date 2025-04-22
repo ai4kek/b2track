@@ -1,3 +1,13 @@
+#!/usr/bin/env python3
+
+##########################################################################
+# basf2 (Belle II Analysis Software Framework)                           #
+# Author: The Belle II Collaboration                                     #
+#                                                                        #
+# See git log for contributors and copyright holders.                    #
+# This file is licensed under LGPL-3.0, see LICENSE.md.                  #
+##########################################################################
+
 """
 SciPy Optimization Script for Belle II Tracking Parameters
 
@@ -22,10 +32,6 @@ Dependencies:
 - Belle II software stack (basf2)
 - SciPy (comes pre-installed in many Python distributions)
 - `run_tracking_svd.py` and `TrackingMetrics` must handle `params.json` and write `metrics.csv`.
-
-Author:
--------
-ChatGPT
 """
 
 import json
