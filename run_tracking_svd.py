@@ -16,7 +16,7 @@ import mdst
 import tracking
 import json
 import svd
-from tracking.path_utils import add_vxd_track_finding_vxdtf2
+from tracking.path_utils import add_vxd_track_finding_vxdtf2, add_mc_matcher
 from src.tracking_metrics import TrackMetrics as TrackingMetrics
 
 # Reproducibility
@@ -70,6 +70,8 @@ main.add_module("DAFRecoFitter", recoTracksStoreArrayName="RecoTracks")
 
 main.add_module("TrackCreator", recoTrackColName="RecoTracks")
 
+# Adding MCMatcher after TrackCreator
+add_mc_matcher(main)
 
 # Load ToCDCCKF parameter set
 with open("params.json", "r") as f:
@@ -83,7 +85,7 @@ metrics = TrackingMetrics(params, finalstate, filename="metrics.csv")
 main.add_module(metrics)
 
 # Save mDST dataobjects (not required for search)
-# mdst.add_mdst_output(main, mc=True, filename=f"{dataset/{finalstate}_mds.root")
+# mdst.add_mdst_output(main, mc=True, filename=f"dataset/{finalstate}_mdst_svd.root")
 
 # Save all dataobjects (not required for search)
 # main.add_module("RootOutput", outputFileName=f"dataset/{finalstate}_reco.root")

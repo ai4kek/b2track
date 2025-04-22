@@ -24,13 +24,13 @@ basf2.set_random_seed(12345)
 main = basf2.Path()
 
 finalstate = "mixed"
-main.add_module("RootInput", inputFileName=f"dataset/{finalstate}_mdst.root")
+main.add_module("RootInput", inputFileName=f"dataset/{finalstate}_mdst_svd.root")
 
 # Dummy ToCDCCKF params
 params = {"trial": 1, "param1": 1.0, "param2": 0.25, "myTag": "experimentA"}
 
 # Tracking Metrics
 # metrics = TrackingMetrics(params, final_state, filename="test.csv")
-metrics = TrackMetrics(params, final_state, filename="test.csv")
+metrics = TrackMetrics(params, finalstate, filename="test.csv")
 main.add_module(metrics)
 basf2.process(main)
