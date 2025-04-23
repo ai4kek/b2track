@@ -8,12 +8,11 @@
 # This file is licensed under LGPL-3.0, see LICENSE.md.                  #
 ##########################################################################
 
-import os
-import json
-import time
-import subprocess
-import random
 import csv
+import json
+import random
+import subprocess
+import time
 from pathlib import Path
 
 # Number of trials

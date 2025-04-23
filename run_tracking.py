@@ -11,10 +11,11 @@
 # Intended to run with run_search.py script as a subprocess for different
 # trails with specific params. For just tracking, run the start_rec.py.
 
-import basf2
-import mdst
-import tracking
 import json
+
+import basf2
+import tracking
+
 from src.tracking_metrics import TrackMetrics as TrackingMetrics
 
 # Reproducibility

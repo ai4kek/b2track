@@ -8,12 +8,10 @@
 # This file is licensed under LGPL-3.0, see LICENSE.md.                  #
 ##########################################################################
 
-import background
+
 import basf2
 import generators as ge
-import mdst
 import simulation as si
-import logging
 
 # TODO: How to prepend a globaltag? (see Section 5.4 of basf2 docs)
 # TODO: How to add background to simulation? (see Section 9. of basf2 docs)

@@ -8,14 +8,10 @@
 # This file is licensed under LGPL-3.0, see LICENSE.md.                  #
 ##########################################################################
 
+
 import basf2
-import mdst
-import logging
-from ROOT import Belle2
-import os
-import csv
+
 from src.tracking_metrics import TrackMetrics  # non-verbosed
-from src.tracking_metrics import TrackingMetrics  # verbosed
 
 # Reproducibility
 basf2.set_random_seed(12345)

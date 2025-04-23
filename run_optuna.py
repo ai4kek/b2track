@@ -1,172 +1,168 @@
 #!/usr/bin/env python3
 
-##########################################################################
-# basf2 (Belle II Analysis Software Framework)                           #
-# Author: The Belle II Collaboration                                     #
-#                                                                        #
-# See git log for contributors and copyright holders.                    #
-# This file is licensed under LGPL-3.0, see LICENSE.md.                  #
-##########################################################################
-
-"""
-Optuna Optimization Script for Belle II Tracking Parameters
-
-This script performs intelligent parameter optimization for the ToCDCCKF tracking module
-in the Belle II software framework using Optuna. It searches for a combination of 5 
-tracking parameters that maximize the F1 score, which is the harmonic mean of tracking 
-efficiency and purity.
-
-How It Works:
--------------
-- Parameters are sampled using Optuna's TPE (Bayesian) strategy.
-- Each parameter set is written to `params.json`.
-- `basf2 run_tracking_svd.py` is called, which runs the tracking reconstruction pipeline.
-- `TrackingMetrics` in your pipeline saves efficiency and purity to `metrics.csv`.
-- This script reads the latest metrics from the CSV and returns a score to Optuna.
-- The score being maximized is the F1 score:
-  F1 = 2 * (efficiency * purity) / (efficiency + purity)
-
-Requirements:
--------------
-- Belle II software environment should be active (`basf2` should be on PATH).
-- The `run_tracking_svd.py` script should read parameters from `params.json`.
-- The `TrackingMetrics` module should write a `metrics.csv` with `efficiency` and `purity` fields.
-
-Usage:
-------
-Just run the script:
-
-    python run_optuna.py
-
-To run in parallel using a shared SQLite database (optional):
-
-    1. Create a study:
-       optuna create-study --study-name track_optimization \
-            --storage sqlite:///optuna_tracking.db --direction maximize
-
-    2. Replace the study definition in this script with:
-       study = optuna.load_study(study_name="track_optimization",
-                                 storage="sqlite:///optuna_tracking.db")
-
-    3. Launch multiple workers:
-       python run_optuna.py
-       python run_optuna.py
-       ...
-"""
-
-import os
-import json
-import time
-import subprocess
+import argparse
 import csv
-from pathlib import Path
-from multiprocessing import Lock, Manager
+import json
+import os
+import subprocess
+import time
+from multiprocessing import Lock
+
 import optuna
 from optuna.samplers import TPESampler
 from optuna.storages import RDBStorage
 
+from tracking_config import (
+    MAX_TRIALS,
+    METRICS_FIELDS,
+    METRICS_PATH,
+    PARAM_SPACE,
+    PARAMS_PATH,
+    RANDOM_SEED,
+    TRACKING_CMD,
+)
+
+# Create a global lock for CSV file access
+csv_lock = Lock()
+
 # --- Configuration ---
-PARAM_SPACE = {
-    "maximalDeltaPhi": [0.2, 0.3, 0.4],
-    "maximalLayerJump": [2, 4, 6],
-    "minimalPtRequirement": [0.0, 0.1],
-    "pathMaximalCandidatesInFlight": [2, 3],
-    "stateMaximalHitCandidates": [3, 4],
-}
-PARAM_KEYS = list(PARAM_SPACE.keys())
-METRICS_PATH = Path("metrics.csv")
 SQLITE_PATH = "sqlite:///optuna_study.db"
 STUDY_NAME = "tracking_optimization"
 
 
 # --- Setup CSV ---
 def init_metrics_csv():
-    if not METRICS_PATH.exists():
-        with METRICS_PATH.open("w", newline="") as f:
-            writer = csv.writer(f)
-            writer.writerow(
-                ["trial"]
-                + PARAM_KEYS
-                + ["efficiency", "purity", "f1_score", "execution_time"]
-            )
+    """Initialize metrics CSV file with header if it doesn't exist."""
+    with METRICS_PATH.open("w", newline="") as f:
+        writer = csv.writer(f)
+        writer.writerow(METRICS_FIELDS)
+
+
+# --- Update Metrics CSV ---
+def update_metrics_csv(params, elapsed, trial_number):
+    """Update the metrics CSV with parameters and execution time.
+    Thread-safe function that uses a lock to prevent race conditions."""
+    try:
+        # Acquire the lock before accessing the CSV file
+        with csv_lock:
+            # Read the current CSV content
+            with METRICS_PATH.open("r", newline="") as f:
+                reader = csv.DictReader(f)
+                rows = list(reader)
+
+            if not rows:
+                print(f"[ERROR] Trial {trial_number}: No rows found in metrics.csv")
+                return 0.0
+
+            # Get F1 score from last row
+            last_row = rows[-1]
+            try:
+                f1_score = float(last_row["f1_score"])
+            except (ValueError, KeyError):
+                print(f"[ERROR] Trial {trial_number}: Invalid f1_score in metrics.csv")
+                f1_score = 0.0
+
+            # Update execution time and parameters in the last row
+            last_row["execution_time"] = f"{elapsed:.2f}"
+            for key, value in params.items():
+                last_row[key] = str(value)
+
+            # Write the updated content back to the file
+            with METRICS_PATH.open("w", newline="") as f:
+                writer = csv.DictWriter(f, fieldnames=METRICS_FIELDS)
+                writer.writeheader()
+                writer.writerows(rows)
+
+        return f1_score
+    except Exception as e:
+        print(f"[ERROR] Trial {trial_number}: Error processing metrics: {e}")
+        return 0.0
 
 
 # --- Run Tracking ---
-def run_tracking_with_params(
-    params: dict, trial_number: int
-) -> tuple[float, float, float, float]:
-    with open("params.json", "w") as f:
+def run_tracking_with_params(params, trial_number):
+    """Execute tracking pipeline with given parameters and return resulting F1 score."""
+    # Write parameters to JSON
+    with PARAMS_PATH.open("w") as f:
         json.dump(params, f, indent=2)
 
-    start_time = time.time()
+    # Run tracking command
+    start = time.time()
     try:
-        subprocess.run(["basf2", "run_tracking_svd.py"], check=True)
+        subprocess.run(TRACKING_CMD, check=True)
     except subprocess.CalledProcessError:
-        print(f"[ERROR] Trial {trial_number} failed during basf2 execution.")
-        return 0.0, 0.0, 0.0, 0.0
+        print(f"[ERROR] Trial {trial_number}: basf2 execution failed.")
+        return 0.0
+    elapsed = round(time.time() - start, 2)
+    print(f"Trial {trial_number} execution time: {elapsed:.1f}s")
 
-    elapsed = round(time.time() - start_time, 2)
-
-    try:
-        with METRICS_PATH.open(newline="") as f:
-            rows = list(csv.DictReader(f))
-            last = rows[-1]
-            eff = float(last["efficiency"])
-            pur = float(last["purity"])
-            f1 = 2 * eff * pur / (eff + pur + 1e-8)
-            return eff, pur, f1, elapsed
-    except Exception as e:
-        print(f"[ERROR] Trial {trial_number} could not parse metrics: {e}")
-        return 0.0, 0.0, 0.0, elapsed
+    # Update metrics CSV and get F1 score
+    return update_metrics_csv(params, elapsed, trial_number)
 
 
 # --- Objective Function ---
-def objective(trial):
+def trial_objective(trial):
+    """Sample parameters using Optuna, run tracking, and return F1 score for maximization."""
+    # Sample parameters for the trial
     params = {k: trial.suggest_categorical(k, v) for k, v in PARAM_SPACE.items()}
     trial_number = trial.number
-    eff, pur, f1, elapsed = run_tracking_with_params(params, trial_number)
 
-    with LOCK:
-        with METRICS_PATH.open("a", newline="") as f:
-            writer = csv.writer(f)
-            writer.writerow(
-                [trial_number]
-                + [params[k] for k in PARAM_KEYS]
-                + [eff, pur, f1, elapsed]
-            )
+    # Run tracking and get F1 score
+    f1_score = run_tracking_with_params(params, trial_number)
 
-    print(f"[✓] Trial {trial_number} complete — F1: {f1:.4f}")
-    return f1
+    # Print trial info
+    print(f"Trial {trial_number} | F1: {f1_score:.4f} | Params: {params}")
+
+    return f1_score
+
+
+# --- Main ---
+def main():
+    """Parse arguments, initialize CSV, run Optuna optimization, and report best parameters."""
+    # Parse arguments
+    parser = argparse.ArgumentParser(description="Optuna Optimization.")
+    parser.add_argument(
+        "--trials", type=int, default=MAX_TRIALS, help="Number of trials to run"
+    )
+    parser.add_argument(
+        "--workers", type=int, default=os.cpu_count(), help="Number of parallel workers"
+    )
+    parser.add_argument(
+        "--seed", type=int, default=RANDOM_SEED, help="Random seed for reproducibility"
+    )
+    args = parser.parse_args()
+
+    # Initialize metrics CSV if needed
+    if not METRICS_PATH.exists():
+        init_metrics_csv()
+        print(f"[INFO] Metrics CSV initialized: {METRICS_PATH}")
+
+    print(
+        f"[INFO] Starting optimization with {args.workers} workers, {args.trials} trials, seed {args.seed}"
+    )
+
+    # Create Optuna study
+    storage = RDBStorage(url=SQLITE_PATH)
+    sampler = TPESampler(seed=args.seed)
+    study = optuna.create_study(
+        direction="maximize",
+        study_name=STUDY_NAME,
+        storage=storage,
+        sampler=sampler,
+        load_if_exists=True,
+    )
+
+    # Run optimization
+    study.optimize(trial_objective, n_trials=args.trials, n_jobs=args.workers)
+
+    print("\n[INFO] Optimization complete.")
+    print("Best Parameters:")
+    for k, v in study.best_params.items():
+        print(f"  {k}: {v}")
+    print(f"\n🏆 Best F1 Score: {study.best_value:.4f}")
+    print(f"\nTo view results in dashboard, run: optuna-dashboard {SQLITE_PATH}\n")
 
 
 # --- Entry Point ---
 if __name__ == "__main__":
-    print("🚀 Starting Optuna optimization with SQLite logging...\n")
-    init_metrics_csv()
-
-    with Manager() as manager:
-        LOCK = manager.Lock()
-
-        # Connect to SQLite DB
-        storage = RDBStorage(url=SQLITE_PATH)
-
-        # Choose a Sampler (TPE is default)
-        sampler = TPESampler(seed=42)
-
-        study = optuna.create_study(
-            direction="maximize",
-            study_name=STUDY_NAME,
-            storage=storage,
-            sampler=sampler,
-            load_if_exists=True,
-        )
-        study.optimize(objective, n_trials=20, n_jobs=os.cpu_count())
-
-    print("\n✅ Optimization complete.")
-    print(f"Best trial:\n{study.best_trial}")
-    print(f"Score (F1): {study.best_value:.4f}")
-    print(f"Params: {study.best_params}")
-    print(f"Efficiency: {study.best_trial.user_attrs['efficiency']}")
-    print(f"Purity: {study.best_trial.user_attrs['purity']}")
-
-    print(f"\n📊 View results:\n    optuna-dashboard {SQLITE_PATH}")
+    main()

@@ -1,121 +1,168 @@
 #!/usr/bin/env python3
 
-##########################################################################
-# basf2 (Belle II Analysis Software Framework)                           #
-# Author: The Belle II Collaboration                                     #
-#                                                                        #
-# See git log for contributors and copyright holders.                    #
-# This file is licensed under LGPL-3.0, see LICENSE.md.                  #
-##########################################################################
-
-"""
-Grid Search for Belle II Tracking Parameters
-
-Performs exhaustive search over defined parameter combinations. 
-Runs tracking script for each set and saves results to metrics.csv.
-
-Output Columns:
----------------
-trial, maximalDeltaPhi, maximalLayerJump, ..., efficiency, purity, f1_score, execution_time
-
-Usage:
--------
-    python run_gridsearch.py
-"""
-
+import argparse
+import csv
 import itertools
+import json
 import subprocess
 import time
-import json
-import csv
+from multiprocessing import Lock
 from pathlib import Path
 
-# Define discrete parameter grid
-PARAM_SPACE = {
-    "maximalDeltaPhi": [0.2, 0.3, 0.4],
-    "maximalLayerJump": [2, 4, 6],
-    "minimalPtRequirement": [0.0, 0.1],
-    "pathMaximalCandidatesInFlight": [2, 3],
-    "stateMaximalHitCandidates": [3, 4],
-}
+from tracking_config import (
+    METRICS_FIELDS,
+    METRICS_PATH,
+    PARAM_SPACE,
+    PARAMS_PATH,
+    TRACKING_CMD,
+)
 
-PARAM_KEYS = list(PARAM_SPACE.keys())
-GRID = list(itertools.product(*[PARAM_SPACE[k] for k in PARAM_KEYS]))
-NUM_TRIALS = len(GRID)
+# Create a global lock for CSV file access
+csv_lock = Lock()
 
-# Output file: same as original usage
-metrics_path = Path("metrics.csv")
+# Generate the grid of all parameter combinations
+GRID = list(itertools.product(*[PARAM_SPACE[k] for k in PARAM_SPACE.keys()]))
+NUM_GRID_POINTS = len(GRID)
 
-# Prepare metrics file if it doesn't exist
-if not metrics_path.exists():
-    with metrics_path.open("w", newline="") as f:
+
+# --- Setup CSV ---
+def init_metrics_csv():
+    """Initialize metrics CSV file with header if it doesn't exist."""
+    with METRICS_PATH.open("w", newline="") as f:
         writer = csv.writer(f)
-        header = (
-            ["trial"]
-            + PARAM_KEYS
-            + ["efficiency", "purity", "f1_score", "execution_time"]
-        )
-        writer.writerow(header)
+        writer.writerow(METRICS_FIELDS)
 
 
-def run_trial(trial_id, param_values):
-    # Prepare dict for basf2
-    params = dict(zip(PARAM_KEYS, param_values))
-    with open("params.json", "w") as f:
+# --- Update Metrics CSV ---
+def update_metrics_csv(params, elapsed, trial_number):
+    """Thread-safe function to update metrics CSV with parameters and execution time, returning F1 score."""
+    try:
+        with csv_lock:  # Thread-safe lock for parallel workers
+            # Read current CSV content
+            with METRICS_PATH.open("r", newline="") as f:
+                reader = csv.DictReader(f)
+                rows = list(reader)
+
+            if not rows:
+                print(f"[ERROR] Trial {trial_number}: No rows found in metrics.csv")
+                return 0.0
+
+            # Get F1 score from last row
+            last_row = rows[-1]
+            try:
+                f1_score = float(last_row["f1_score"])
+            except (ValueError, KeyError):
+                print(f"[ERROR] Trial {trial_number}: Invalid f1_score in metrics.csv")
+                f1_score = 0.0
+
+            # Update execution time and parameters in the last row
+            last_row["execution_time"] = f"{elapsed:.2f}"
+            for key, value in params.items():
+                last_row[key] = str(value)
+
+            # Write updated content back to file
+            with METRICS_PATH.open("w", newline="") as f:
+                writer = csv.DictWriter(f, fieldnames=METRICS_FIELDS)
+                writer.writeheader()
+                writer.writerows(rows)
+
+        return f1_score
+    except Exception as e:
+        print(f"[ERROR] Trial {trial_number}: Error processing metrics: {e}")
+        return 0.0
+
+
+# --- Run Tracking ---
+def run_tracking_with_params(params, trial_number):
+    """Execute tracking pipeline with given parameters and return resulting F1 score."""
+    # Write parameters to JSON
+    with PARAMS_PATH.open("w") as f:
         json.dump(params, f, indent=2)
 
-    # Run Belle II tracking
+    # Run tracking command
     start = time.time()
     try:
-        subprocess.run(["basf2", "run_tracking_svd.py"], check=True)
+        subprocess.run(TRACKING_CMD, check=True)
     except subprocess.CalledProcessError:
-        print(f"[ERROR] Failed basf2 run for trial {trial_id}")
-        return None
+        print(f"[ERROR] Trial {trial_number}: basf2 execution failed.")
+        return 0.0
     elapsed = round(time.time() - start, 2)
+    print(f"Trial {trial_number} execution time: {elapsed:.1f}s")
 
-    # Read metrics from the metrics file
-    with metrics_path.open(newline="") as f:
-        rows = list(csv.DictReader(f))
-        if not rows:
-            print("[ERROR] metrics.csv is empty after run.")
-            return None
-
-        last = rows[-1]
-        try:
-            eff = float(last["efficiency"])
-            pur = float(last["purity"])
-        except (KeyError, ValueError):
-            print("[ERROR] Could not parse efficiency/purity.")
-            return None
-
-        f1 = 2 * eff * pur / (eff + pur + 1e-8)
-
-    # Append row to metrics.csv
-    with metrics_path.open("a", newline="") as f:
-        writer = csv.writer(f)
-        row = [trial_id] + list(param_values) + [eff, pur, f1, elapsed]
-        writer.writerow(row)
-
-    return f1
+    # Update metrics CSV and get F1 score
+    return update_metrics_csv(params, elapsed, trial_number)
 
 
-# --- Run Grid Search ---
-best_score = -1
-best_params = None
+# --- Objective Function ---
+def trial_objective(trial_number, param_values):
+    """Convert parameter values to dictionary, run tracking, and return F1 score."""
+    # Convert parameter values to dictionary
+    params = {}
+    for i, param_name in enumerate(PARAM_SPACE.keys()):
+        params[param_name] = param_values[i]
 
-print(f"🔍 Starting grid search over {NUM_TRIALS} trials...")
+    # Run tracking and get F1 score
+    f1_score = run_tracking_with_params(params, trial_number)
 
-for i, param_set in enumerate(GRID, 1):
-    print(f"[Trial {i}/{NUM_TRIALS}] Params: {dict(zip(PARAM_KEYS, param_set))}")
-    score = run_trial(i, param_set)
-    if score is not None and score > best_score:
-        best_score = score
-        best_params = param_set
+    # Print trial info
+    print(f"Trial {trial_number} | F1: {f1_score:.4f} | Params: {params}")
 
-# --- Final Result ---
-print("\n✅ Grid search complete.")
-if best_params:
-    print(f"\n🏆 Best F1 Score: {best_score:.4f}")
-    print("🧮 Best Parameters:")
-    for k, v in zip(PARAM_KEYS, best_params):
-        print(f"  {k}: {v}")
+    return f1_score
+
+
+# --- Main ---
+def main():
+    """Parse arguments, initialize CSV, run grid search, and report best parameters."""
+    # Parse arguments
+    parser = argparse.ArgumentParser(description="Grid Search Optimization.")
+    parser.add_argument(
+        "--max-trials",
+        type=int,
+        default=NUM_GRID_POINTS,
+        help="Maximum number of trials to run (will use first N points from grid)",
+    )
+    args = parser.parse_args()
+
+    # Initialize metrics CSV if needed
+    if not METRICS_PATH.exists():
+        init_metrics_csv()
+        print(f"[INFO] Metrics CSV initialized: {METRICS_PATH}")
+
+    # Limit trials if requested
+    num_trials = min(args.max_trials, NUM_GRID_POINTS)
+    grid_subset = GRID[:num_trials]
+
+    print(
+        f"[INFO] Starting grid search with {num_trials} trials out of {NUM_GRID_POINTS} possible combinations"
+    )
+
+    # Run grid search
+    best_score = -1
+    best_params = None
+
+    for i, param_set in enumerate(grid_subset, 1):
+        print(f"[Trial {i}/{num_trials}]")
+        score = trial_objective(i, param_set)
+
+        if score > best_score:
+            best_score = score
+            best_params = param_set
+
+    # Print results
+    print("\n[INFO] Grid search complete.")
+    if best_params:
+        print("Best Parameters:")
+        for i, (param_name, value) in enumerate(zip(PARAM_SPACE.keys(), best_params)):
+            print(f"  {param_name}: {value}")
+        print(f"\n🏆 Best F1 Score: {best_score:.4f}\n")
+
+        # Save best parameters
+        best_params_dict = dict(zip(PARAM_SPACE.keys(), best_params))
+        with Path("best_params.json").open("w") as f:
+            json.dump(best_params_dict, f, indent=2)
+        print("Best parameters saved to best_params.json\n")
+
+
+# --- Entry Point ---
+if __name__ == "__main__":
+    main()

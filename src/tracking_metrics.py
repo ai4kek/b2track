@@ -8,12 +8,11 @@
 # This file is licensed under LGPL-3.0, see LICENSE.md.                  #
 ##########################################################################
 
-import basf2
-import mdst
-import logging
-from ROOT import Belle2
-import os
 import csv
+import os
+
+import basf2
+from ROOT import Belle2
 
 
 # Main Module
@@ -107,14 +106,17 @@ class TrackMetrics(basf2.Module):
             else 0
         )
 
-        print(f"\nTracking Efficiency: {efficiency:.4f}, Tracking Purity: {purity:.4f}")
+        f1 = (2 * efficiency * purity) / (efficiency + purity + 1e-8)
+
+        print(f"\nEfficiency: {efficiency:.4f}, Purity: {purity:.4f}, F1: {f1:.4f}")
 
         # Save metrics and parameters
         row = {
             **self.params,
             "efficiency": efficiency,
             "purity": purity,
-            "finalstate": self.finalstate,
+            "f1_score": f1,
+            "final_state": self.finalstate,
             "execution_time": "",  # Leave empty for run_search.py to fill
         }
 
@@ -175,7 +177,7 @@ class TrackingMetrics(basf2.Module):
 
         # count total
         self.total_mc_particles += self.MCParticles.getEntries()
-        self.selected_reco_tracks += self.Tracks.getEntries()
+        self.selected_reco_tracks += self.RecoTracks.getEntries()
 
         # Tracking Purity: Number of matched reconstructed tracks divided by total
         # reconstructed tracks. We already have 'selected_reco_tracks', but need to
@@ -183,7 +185,7 @@ class TrackingMetrics(basf2.Module):
         # matched to an mc particle per event, then aggregate for all events.
 
         # Count matched Tracks
-        for track in self.Tracks:
+        for track in self.RecoTracks:
             # track_to_particle_relation = track.getRelationsTo("MCParticles")
             # track_to_particle_relation = track.getRelatedTo("MCParticles")
             track_to_particle = track.getRelated("MCParticles")
@@ -251,8 +253,9 @@ class TrackingMetrics(basf2.Module):
                 # count selected and matched particles
                 # particle_to_track_relation = mc.getRelationsFrom("Tracks")
                 # particle_to_track_relation = mc.getRelatedFrom("Tracks")
-                particle_to_track_relation = mc.getRelated("Tracks")
+                particle_to_track_relation = mc.getRelated("RecoTracks")
 
+                print(f"RecoTracks: {particle_to_track_relation}")
                 # Get relation with a weight
                 # particle_to_track_relation, weight = mc.getRelatedWithWeight[Belle2.MCParticle]("Tracks")
 

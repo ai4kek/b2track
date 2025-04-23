@@ -1,125 +1,180 @@
 #!/usr/bin/env python3
 
-##########################################################################
-# basf2 (Belle II Analysis Software Framework)                           #
-# Author: The Belle II Collaboration                                     #
-#                                                                        #
-# See git log for contributors and copyright holders.                    #
-# This file is licensed under LGPL-3.0, see LICENSE.md.                  #
-##########################################################################
-
-"""
-SciPy Optimization Script for Belle II Tracking Parameters
-
-This script uses SciPy's `differential_evolution` to search for a combination of tracking
-parameters that maximize the F1 score — the harmonic mean of tracking efficiency and purity.
-
-How It Works:
--------------
-- The search space is discretized and flattened for compatibility with SciPy.
-- Each parameter set is converted to a JSON file (`params.json`).
-- `basf2 run_tracking_svd.py` is invoked to run the tracking algorithm.
-- The output `metrics.csv` is parsed to extract efficiency and purity.
-- The F1 score is computed and returned as the objective.
-- The objective is negated since `differential_evolution` minimizes the objective.
-
-Usage:
-------
-    python run_scipy.py
-
-Dependencies:
--------------
-- Belle II software stack (basf2)
-- SciPy (comes pre-installed in many Python distributions)
-- `run_tracking_svd.py` and `TrackingMetrics` must handle `params.json` and write `metrics.csv`.
-"""
-
+import argparse
+import csv
 import json
+import os
 import subprocess
 import time
-import csv
+from multiprocessing import Lock
 from pathlib import Path
-import numpy as np
+
 from scipy.optimize import differential_evolution
 
-# --- Define the discrete search space ---
+from tracking_config import (
+    MAX_TRIALS,
+    METRICS_FIELDS,
+    METRICS_PATH,
+    PARAM_SPACE,
+    PARAMS_PATH,
+    RANDOM_SEED,
+    TRACKING_CMD,
+)
 
-PARAM_SPACE = {
-    "maximalDeltaPhi": [0.2, 0.3, 0.4],
-    "maximalLayerJump": [2, 4, 6],
-    "minimalPtRequirement": [0.0, 0.1],
-    "pathMaximalCandidatesInFlight": [2, 3],
-    "stateMaximalHitCandidates": [3, 4],
-}
-
-PARAM_KEYS = list(PARAM_SPACE.keys())
-PARAM_CHOICES = [PARAM_SPACE[key] for key in PARAM_KEYS]
-BOUNDS = [(0, len(choices) - 1) for choices in PARAM_CHOICES]
-
-METRICS_FILE = Path("metrics.csv")
+# Create a global lock for CSV file access
+csv_lock = Lock()
 
 
-# --- Helper to convert float vector to parameter dict ---
-def vector_to_params(vector):
-    return {
-        key: PARAM_SPACE[key][int(round(val))] for key, val in zip(PARAM_KEYS, vector)
-    }
+# --- Setup CSV ---
+def init_metrics_csv():
+    """Initialize metrics CSV file with header if it doesn't exist."""
+    with METRICS_PATH.open("w", newline="") as f:
+        writer = csv.writer(f)
+        writer.writerow(METRICS_FIELDS)
 
 
-# --- Objective function (to be minimized, so return -F1) ---
-def objective(vector):
-    params = vector_to_params(vector)
+# --- Update Metrics CSV ---
+def update_metrics_csv(params, elapsed, trial_number):
+    """Thread-safe function to update metrics CSV with parameters and execution time, returning F1 score."""
+    try:
+        with csv_lock:  # Thread-safe lock for parallel workers
+            # Read current CSV content
+            with METRICS_PATH.open("r", newline="") as f:
+                reader = csv.DictReader(f)
+                rows = list(reader)
 
-    with open("params.json", "w") as f:
+            if not rows:
+                print(f"[ERROR] Trial {trial_number}: No rows found in metrics.csv")
+                return 0.0
+
+            # Get F1 score from last row
+            last_row = rows[-1]
+            try:
+                f1_score = float(last_row["f1_score"])
+            except (ValueError, KeyError):
+                print(f"[ERROR] Trial {trial_number}: Invalid f1_score in metrics.csv")
+                f1_score = 0.0
+
+            # Update execution time and parameters in the last row
+            last_row["execution_time"] = f"{elapsed:.2f}"
+            for key, value in params.items():
+                last_row[key] = str(value)
+
+            # Write updated content back to file
+            with METRICS_PATH.open("w", newline="") as f:
+                writer = csv.DictWriter(f, fieldnames=METRICS_FIELDS)
+                writer.writeheader()
+                writer.writerows(rows)
+
+        return f1_score
+    except Exception as e:
+        print(f"[ERROR] Trial {trial_number}: Error processing metrics: {e}")
+        return 0.0
+
+
+# --- Run Tracking ---
+def run_tracking_with_params(params, trial_number):
+    """Execute tracking pipeline with given parameters and return resulting F1 score."""
+    # Write parameters to JSON
+    with PARAMS_PATH.open("w") as f:
         json.dump(params, f, indent=2)
 
+    # Run tracking command
     start = time.time()
     try:
-        subprocess.run(["basf2", "run_tracking_svd.py"], check=True)
-    except subprocess.CalledProcessError as e:
-        print(f"[ERROR] Run failed: {e}")
-        return 1.0  # Penalize failed runs
+        subprocess.run(TRACKING_CMD, check=True)
+    except subprocess.CalledProcessError:
+        print(f"[ERROR] Trial {trial_number}: basf2 execution failed.")
+        return 0.0
+    elapsed = round(time.time() - start, 2)
+    print(f"Trial {trial_number} execution time: {elapsed:.1f}s")
 
-    elapsed = time.time() - start
-
-    if not METRICS_FILE.exists():
-        print("[ERROR] metrics.csv not found.")
-        return 1.0
-
-    with METRICS_FILE.open(newline="") as f:
-        rows = list(csv.DictReader(f))
-        if not rows:
-            print("[ERROR] No data in metrics.csv")
-            return 1.0
-
-        last_row = rows[-1]
-        eff = float(last_row["efficiency"])
-        pur = float(last_row["purity"])
-
-        f1 = 2 * eff * pur / (eff + pur + 1e-8)
-        print(
-            f"[INFO] F1 = {f1:.4f} (eff={eff:.3f}, pur={pur:.3f})  Time: {elapsed:.1f}s"
-        )
-
-        return -f1  # Negate because we are minimizing
+    # Update metrics CSV and get F1 score
+    return update_metrics_csv(params, elapsed, trial_number)
 
 
-# --- Run optimization ---
-if __name__ == "__main__":
-    result = differential_evolution(
-        objective,
-        bounds=BOUNDS,
-        strategy="best1bin",
-        maxiter=10,
-        polish=False,
-        disp=True,
-        workers=1,  # Can set to -1 to use all CPUs (needs `multiprocessing` safe code)
+# --- Objective Function ---
+def trial_objective(vector):
+    """Convert parameter vector to values, run tracking, and return negative F1 score for minimization."""
+    # Convert vector to parameter values
+    params = {k: PARAM_SPACE[k][int(round(v))] for k, v in zip(PARAM_SPACE, vector)}
+
+    # Get trial number
+    if not hasattr(trial_objective, "counter"):
+        trial_objective.counter = 0
+    trial_objective.counter += 1
+    trial_number = trial_objective.counter
+
+    # Run tracking and get F1 score
+    f1_score = run_tracking_with_params(params, trial_number)
+
+    # Print trial info
+    print(f"Trial {trial_number} | F1: {f1_score:.4f} | Params: {params}")
+
+    # Return negative F1 score for minimization
+    return -f1_score
+
+
+# --- Main ---
+def main():
+    """Parse arguments, initialize CSV, run optimization, and save best parameters."""
+    # Parse arguments
+    parser = argparse.ArgumentParser(description="SciPy Differential Evolution.")
+    parser.add_argument(
+        "--trials", type=int, default=MAX_TRIALS, help="Number of trials to run"
+    )
+    parser.add_argument(
+        "--workers", type=int, default=os.cpu_count(), help="Number of parallel workers"
+    )
+    parser.add_argument(
+        "--seed", type=int, default=RANDOM_SEED, help="Random seed for reproducibility"
+    )
+    args = parser.parse_args()
+
+    # Initialize metrics CSV if needed
+    if not METRICS_PATH.exists():
+        init_metrics_csv()
+        print(f"[INFO] Metrics CSV initialized: {METRICS_PATH}")
+
+    # Set up optimization
+    bounds = [(0, len(PARAM_SPACE[k]) - 1) for k in PARAM_SPACE]
+    print(
+        f"[INFO] Starting optimization with {args.workers} workers, {args.trials} trials, seed {args.seed}"
     )
 
-    best_params = vector_to_params(result.x)
+    # Run differential evolution
+    result = differential_evolution(
+        trial_objective,
+        bounds=bounds,
+        strategy="best1bin",
+        maxiter=args.trials,
+        polish=False,
+        disp=True,
+        workers=args.workers,
+        seed=args.seed,
+        updating="deferred",
+    )
+
+    # Process results
+    best_vector = result.x
+    best_params = {
+        k: PARAM_SPACE[k][int(round(v))] for k, v in zip(PARAM_SPACE, best_vector)
+    }
     best_score = -result.fun
 
-    print("\n✅ Best Parameters Found:")
+    # Print results
+    print("\n[INFO] Optimization complete.")
+    print("Best Parameters:")
     for k, v in best_params.items():
         print(f"  {k}: {v}")
-    print(f"\n🔎 Best F1 Score: {best_score:.4f}")
+    print(f"\n🏆 Best F1 Score: {best_score:.6f}\n")
+
+    # Save best parameters
+    with Path("best_params.json").open("w") as f:
+        json.dump(best_params, f, indent=2)
+    print("Best parameters saved to best_params.json\n")
+
+
+# --- Entry Point ---
+if __name__ == "__main__":
+    main()
