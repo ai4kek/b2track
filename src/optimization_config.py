@@ -25,8 +25,8 @@ METRICS_FIELDS = [
     "execution_time",
 ]
 
-# Tracking command
-TRACKING_CMD = ["basf2", "run_tracking_svd.py"]
+# Tracking command (with -- separator for basf2 argument passing)
+TRACKING_CMD = ["basf2", "run_tracking_svd.py", "--"]
 
 # Optimization settings
 MAX_TRIALS = 20
