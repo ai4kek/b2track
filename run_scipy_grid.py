@@ -2,32 +2,117 @@
 
 import argparse
 import csv
+import hashlib
 import itertools
 import json
+import logging
+import multiprocessing
 import os
 import subprocess
+import sys
 import time
 from multiprocessing import Pool
 from pathlib import Path
-
 from src.optimization_config import (
     METRICS_FIELDS,
-    METRICS_PATH,
     PARAM_SPACE,
-    PARAMS_PATH,
     TRACKING_CMD,
 )
+
+# Configure logging
+log_dir = Path("logs")
+log_dir.mkdir(exist_ok=True)
+log_file = log_dir / "grid_optimization.log"
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(processName)s - %(levelname)s - %(message)s",
+    handlers=[logging.FileHandler(log_file), logging.StreamHandler(sys.stdout)],
+)
+logger = logging.getLogger("grid_optimizer")
+
+# Initialize global variables for worker tracking
+_worker_id = 0
+_trial_counter = 0
 
 # Generate the grid of all parameter combinations
 GRID = list(itertools.product(*[PARAM_SPACE[k] for k in PARAM_SPACE.keys()]))
 NUM_GRID_POINTS = len(GRID)
 
 
+def init_worker(worker_ids):
+    """Initialize worker-specific environment variables and counter."""
+    global _worker_id, _trial_counter
+    # Each process gets a worker ID based on its process ID
+    process_idx = multiprocessing.current_process()._identity[0] - 1
+    if process_idx < 0:  # Main process
+        _worker_id = 0
+    else:
+        _worker_id = worker_ids[process_idx % len(worker_ids)]
+    _trial_counter = 0
+    os.environ["WORKER_ID"] = str(_worker_id)
+    logger.info(f"Worker {_worker_id} initialized (PID: {os.getpid()})")
+
+
+def compute_param_hash(params):
+    """Hash the sorted JSON string of params for uniqueness."""
+    param_str = json.dumps(params, sort_keys=True)
+    return hashlib.sha1(param_str.encode()).hexdigest()[:10]
+
+
+def cleanup_worker_files():
+    """Clean up worker-specific parameter files."""
+    for param_file in Path().glob("params_worker_*.json"):
+        param_file.unlink(missing_ok=True)
+
+
+def get_worker_params_path(worker_id):
+    """Get the worker-specific parameters file path."""
+    if worker_id is None:
+        raise ValueError("Worker ID must be provided")
+    return Path(f"params_worker_{worker_id:02d}.json")
+
+
 def get_worker_metrics_path(worker_id):
-    """Get the metrics file path for a specific worker."""
-    if worker_id is None:  # Single worker mode
-        return METRICS_PATH
+    """Get the worker-specific metrics file path."""
+    if worker_id is None:
+        raise ValueError("Worker ID must be provided")
     return Path(f"metrics_worker_{worker_id:02d}.csv")
+
+
+# --- Handle Metrics CSV ---
+def update_metrics_csv(params, elapsed, trial_number, worker_id, param_hash=None):
+    """Update worker-specific metrics CSV with trial results and return F1 score."""
+    if worker_id is None:
+        raise ValueError("Worker ID must be provided for thread-safe operation")
+    try:
+        # Read trial results
+        trial_metrics = get_worker_metrics_path(worker_id)
+        with trial_metrics.open("r", newline="") as f:
+            reader = csv.DictReader(f)
+            rows = list(reader)
+            row = rows[-1] if rows else {}
+            f1_score = float(row.get("f1_score", 0.0))
+        # Update row with additional info
+        row.update(
+            {
+                "execution_time": f"{elapsed:.2f}",
+                "worker_id": str(worker_id),
+                "param_hash": param_hash if param_hash else "",
+                **{k: str(v) for k, v in params.items()},
+            }
+        )
+        # Append to worker-specific metrics file
+        is_new_file = not trial_metrics.exists()
+        with trial_metrics.open("a" if not is_new_file else "w", newline="") as f:
+            writer = csv.DictWriter(f, fieldnames=METRICS_FIELDS)
+            if is_new_file:
+                writer.writeheader()
+            writer.writerow(row)
+        return f1_score
+    except Exception as e:
+        print(f"[ERROR] Trial {trial_number}: Error processing metrics: {e}")
+        return 0.0
 
 
 def merge_worker_metrics():
@@ -44,94 +129,79 @@ def merge_worker_metrics():
 
     # Write merged results
     if all_rows:
-        with METRICS_PATH.open("w", newline="") as f:
+        with open("metrics.csv", "w", newline="") as f:
             writer = csv.DictWriter(f, fieldnames=METRICS_FIELDS)
             writer.writeheader()
             writer.writerows(all_rows)
 
 
-def init_worker(worker_id):
-    """Initialize worker-specific environment variables."""
-    os.environ["WORKER_ID"] = str(worker_id)
-    print(f"[INFO] Worker {worker_id} initialized")
-
-
-# --- Setup CSV ---
-def init_metrics_csv(worker_id=None):
-    """Initialize metrics CSV file with header if it doesn't exist."""
-    metrics_path = get_worker_metrics_path(worker_id)
-    with metrics_path.open("w", newline="") as f:
-        writer = csv.DictWriter(f, fieldnames=METRICS_FIELDS)
-        writer.writeheader()
-
-
-# --- Update Metrics CSV ---
-def update_metrics_csv(params, elapsed, trial_number, worker_id=None):
-    """Thread-safe function to update metrics CSV with parameters and execution time, returning F1 score."""
-    try:
-        trial_metrics = f"metrics_trial_{trial_number:03d}.csv"
-        trial_metrics_path = Path(trial_metrics)
-
-        # Read trial metrics file
-        with trial_metrics_path.open("r", newline="") as f:
-            reader = csv.DictReader(f)
-            row = list(reader)[-1]
-            f1_score = float(row["f1_score"])
-
-        # Update execution time and parameters
-        row["execution_time"] = f"{elapsed:.2f}"
-        for key, value in params.items():
-            row[key] = str(value)
-
-        # Append to worker-specific metrics file
-        worker_metrics = get_worker_metrics_path(worker_id)
-        with worker_metrics.open("a", newline="") as f:
-            writer = csv.DictWriter(f, fieldnames=METRICS_FIELDS)
-            writer.writerow(row)
-
-        return f1_score
-    except Exception as e:
-        print(f"[ERROR] Trial {trial_number}: Error processing metrics: {e}")
-        return 0.0
-
-
 # --- Run Tracking ---
-def run_tracking_with_params(params, trial_number, worker_id=None):
-    """Execute tracking pipeline with given parameters and return resulting F1 score."""
-    # Write parameters to JSON
-    with PARAMS_PATH.open("w") as f:
+def run_tracking_with_params(params, trial_number, worker_id, param_hash=None):
+    """Execute tracking pipeline and return resulting F1 score."""
+    if worker_id is None:
+        raise ValueError("Worker ID must be provided for thread-safe operation")
+    if param_hash is None:
+        param_hash = compute_param_hash(params)
+    print(
+        f"[START] Worker {worker_id} | Trial {trial_number} | param_hash: {param_hash} | Params: {params}"
+    )
+    # Save parameters to worker-specific JSON file
+    params_path = get_worker_params_path(worker_id)
+    with params_path.open("w") as f:
         json.dump(params, f, indent=2)
-
-    # Run tracking with trial-specific metrics file
-    trial_metrics = f"metrics_trial_{trial_number:03d}.csv"
+    # Run tracking with worker-specific params and metrics files
+    metrics_path = get_worker_metrics_path(worker_id)
     start = time.time()
     try:
-        cmd = TRACKING_CMD + ["--metrics", trial_metrics]
-        subprocess.run(cmd, check=True)
+        print(
+            f"Worker {worker_id} | Trial {trial_number} running tracking command with --params {params_path} --metrics {metrics_path}"
+        )
+        subprocess.run(
+            TRACKING_CMD
+            + ["--params", str(params_path), "--metrics", str(metrics_path)],
+            check=True,
+        )
+        elapsed = round(time.time() - start, 2)
+        print(
+            f"Worker {worker_id} | Trial {trial_number} execution time: {elapsed:.1f}s"
+        )
+        return update_metrics_csv(
+            params, elapsed, trial_number, worker_id, param_hash=param_hash
+        )
     except subprocess.CalledProcessError:
-        print(f"[ERROR] Trial {trial_number}: basf2 execution failed.")
+        print(
+            f"[ERROR] Worker {worker_id} | Trial {trial_number}: basf2 execution failed."
+        )
         return 0.0
-    elapsed = round(time.time() - start, 2)
-    print(f"Trial {trial_number} execution time: {elapsed:.1f}s")
-
-    # Update metrics CSV and get F1 score
-    return update_metrics_csv(params, elapsed, trial_number, worker_id)
 
 
 # --- Objective Function ---
 def trial_objective(trial_number, param_values, worker_id=None):
     """Convert parameter values to dictionary, run tracking, and return F1 score."""
-    # Convert parameter values to dictionary
-    params = {}
-    for i, param_name in enumerate(PARAM_SPACE.keys()):
-        params[param_name] = param_values[i]
+    global _trial_counter
 
-    # Run tracking and get F1 score
-    f1_score = run_tracking_with_params(params, trial_number, worker_id)
+    # If worker_id is None, use the global worker ID
+    if worker_id is None:
+        worker_id = _worker_id
+        _trial_counter += 1
+        trial_number = _trial_counter
 
-    # Print trial info
-    print(f"Trial {trial_number} | F1: {f1_score:.4f} | Params: {params}")
+    # Convert tuple of parameter values to dictionary
+    params = dict(zip(PARAM_SPACE.keys(), param_values))
+    param_hash = compute_param_hash(params)
 
+    logger.info(
+        f"[TRIAL START] Worker {worker_id} | Trial {trial_number} | param_hash: {param_hash} | Params: {params}"
+    )
+
+    # Run tracking with parameters
+    f1_score = run_tracking_with_params(
+        params, trial_number, worker_id, param_hash=param_hash
+    )
+
+    logger.info(
+        f"[TRIAL END] Worker {worker_id} | Trial {trial_number} | F1: {f1_score:.4f} | param_hash: {param_hash}"
+    )
     return f1_score
 
 
@@ -153,18 +223,41 @@ def main():
         help="Number of parallel workers",
     )
     parser.add_argument(
-        "--slurm",
+        "--cluster",
         action="store_true",
         default=False,
-        help="Running as part of a Slurm job array",
+        help="Running as part of a cluster job array (Slurm or LSF)",
     )
     args = parser.parse_args()
 
-    # Get Slurm array job ID and total jobs if running on Slurm
-    if args.slurm:
-        job_id = int(os.environ.get("SLURM_ARRAY_TASK_ID", "0"))
-        n_jobs = int(os.environ.get("SLURM_ARRAY_TASK_COUNT", "1"))
-        print(f"[INFO] Running as Slurm job {job_id} of {n_jobs}")
+    # Get cluster job ID and total jobs if running on a cluster (Slurm or LSF)
+    if args.cluster:
+        # Check for Slurm environment variables
+        if "SLURM_ARRAY_TASK_ID" in os.environ:
+            job_id = int(os.environ.get("SLURM_ARRAY_TASK_ID", "0"))
+            n_jobs = int(os.environ.get("SLURM_ARRAY_TASK_COUNT", "1"))
+            cluster_type = "Slurm"
+        # Check for LSF environment variables
+        elif "LSB_JOBINDEX" in os.environ:
+            job_id = int(os.environ.get("LSB_JOBINDEX", "0")) - 1  # LSF is 1-indexed
+            # For LSF, we need to calculate total jobs differently
+            # LSB_JOBINDEX_END gives the last index in the job array
+            if "LSB_JOBINDEX_END" in os.environ:
+                n_jobs = int(os.environ.get("LSB_JOBINDEX_END", "1"))
+            else:
+                # If LSB_JOBINDEX_END is not available, try to get from LSB_JOBINDEX_STEP
+                step = int(os.environ.get("LSB_JOBINDEX_STEP", "1"))
+                start = int(os.environ.get("LSB_JOBINDEX_START", "1"))
+                end = int(os.environ.get("LSB_JOBINDEX_END", start))
+                n_jobs = (end - start) // step + 1
+            cluster_type = "LSF"
+        else:
+            # Fallback if no recognized environment variables are found
+            job_id = 0
+            n_jobs = 1
+            cluster_type = "Unknown"
+
+        print(f"[INFO] Running as {cluster_type} job {job_id} of {n_jobs}")
 
         # Use job ID as worker ID
         os.environ["WORKER_ID"] = str(job_id)
@@ -180,8 +273,7 @@ def main():
 
         print(f"[INFO] Job {job_id} handling trials {start_trial} to {end_trial-1}")
 
-        # Initialize worker metrics file
-        init_metrics_csv(job_id)
+        # Worker metrics file will be created by update_metrics_csv when needed
 
         # Run grid search for this worker's subset
         best_score = -1
@@ -200,9 +292,7 @@ def main():
         if args.workers > 1:
             print(f"[INFO] Starting grid search with {args.workers} workers")
 
-            # Initialize worker metrics files
-            for worker_id in range(args.workers):
-                init_metrics_csv(worker_id)
+            # Worker metrics files will be created by update_metrics_csv when needed
 
             # Divide grid points among workers
             grid_chunks = [GRID[i :: args.workers] for i in range(args.workers)]
@@ -231,7 +321,6 @@ def main():
         else:
             # Single worker mode
             print("[INFO] Starting grid search with single worker")
-            init_metrics_csv(None)
 
             best_score = -1
             best_params = None

@@ -38,6 +38,12 @@ def parse_args():
         help="Final state type (default: mixed)",
     )
     parser.add_argument(
+        "--params",
+        type=str,
+        default="params.json",
+        help="Input parameters JSON file (default: params.json)",
+    )
+    parser.add_argument(
         "--metrics",
         type=str,
         default="metrics.csv",
@@ -108,7 +114,7 @@ def main():
     add_mc_matcher(main)
 
     # Load ToCDCCKF parameter set
-    with open("params.json", "r") as f:
+    with open(args.params, "r") as f:
         params = json.load(f)
 
     # Inject parameters into ToCDCCKF

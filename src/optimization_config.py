@@ -13,7 +13,6 @@ PARAM_SPACE = {
 
 # Paths
 METRICS_PATH = Path("metrics.csv")
-PARAMS_PATH = Path("params.json")
 
 # CSV fields
 METRICS_FIELDS = [
