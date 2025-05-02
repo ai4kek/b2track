@@ -10,6 +10,7 @@
 
 
 import basf2
+import background
 import generators as ge
 import simulation as si
 
@@ -58,7 +59,7 @@ bkg_files = background.get_background_files(
 si.add_simulation(
     path=main,
     components=None,
-    bkgfiles=None,  # to add backgrond set bkgfiles=bkg_files
+    bkgfiles=bkg_files,  # to add backgrond set bkgfiles=bkg_files
     bkgOverlay=True,
 )
 
