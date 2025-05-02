@@ -2,6 +2,7 @@
 
 #BSUB -J Optz                        # Job name
 #BSUB -P aakram                      # Account name (project ID)
+#BSUB -G b2_belle2                   # Group for accounting purposes
 #BSUB -n 8                           # Number of cores (total across all nodes)
 #BSUB -R "span[hosts=1]"             # Request nodes
 #BSUB -q s                           # Submit to queue 's' (short jobs < 3h)
