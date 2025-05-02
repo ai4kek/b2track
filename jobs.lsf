@@ -1,5 +1,5 @@
 #!/bin/bash
-#!/bin/bash
+
 #BSUB -J Optz                        # Job name
 #BSUB -P aakram                      # Account name (project ID)
 #BSUB -n 8                           # Number of cores (total across all nodes)
@@ -12,6 +12,7 @@
 #BSUB -B                             # Send email at job start
 #BSUB -N                             # Send email at job completion
 
+mkdir -p logs
 source /cvmfs/belle.cern.ch/tools/b2setup release-09-00-00
 
 echo "Running job $LSB_JOBID on $(hostname)"
