@@ -49,8 +49,10 @@ else:
     raise ValueError(f"Unknown final_state: {final_state}.")
 
 # Add background
-# bkg_dir = None  # None (default: BELLE2_BACKGROUND_DIR on KEKCC) or set a path
-# bkg_files = background.get_background_files(folder=bkg_dir, output_file_info=True)
+bkg_files = background.get_background_files(
+    folder=None,  # None >> BELLE2_BACKGROUND_DIR, or set otherwise
+    output_file_info=True,
+)
 
 # Add simulation
 si.add_simulation(

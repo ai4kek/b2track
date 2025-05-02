@@ -1,24 +1,22 @@
 #!/bin/bash
+#!/bin/bash
+#BSUB -J Optz                        # Job name
+#BSUB -P aakram                      # Account name (project ID)
+#BSUB -n 8                           # Number of cores (total across all nodes)
+#BSUB -R "span[hosts=1]"             # Request nodes
+#BSUB -q s                           # Submit to queue 's' (short jobs < 3h)
+#BSUB -W 02:55                       # Runtime (hh:mm)
+#BSUB -o logs/%J.out                 # Standard output file (%J is job ID)
+#BSUB -e logs/%J.err                 # Standard error file
+#BSUB -u adeel.akram@physics.uu.se   # Email address for notifications
+#BSUB -B                             # Send email at job start
+#BSUB -N                             # Send email at job completion
 
-# submit jobs as
-# bsub < jobs.bsub
+source /cvmfs/belle.cern.ch/tools/b2setup release-09-00-00
 
-#BSUB -n 4
-#BSUB -q submission_queue
-#BSUB -J analysis1
-#BSUB -G my_group
-#BSUB -M 8000000
-#BSUB -W 08:00
-#BSUB -R "rusage[mem=2000]"
-#BSUB -R "rusage[scratch=1000]"    # per core
-#BSUB -o analysis1.%J.out
-#BSUB -e analysis1.%J.err
+echo "Running job $LSB_JOBID on $(hostname)"
+echo "Job started on $(date)"
 
-# module load <module name>
+basf2 start_sim.py
 
-# source software
-source /export/home/adeel/belle2/tools/b2setup
-source /export/home/adeel/belle2/develop/b2setup
-
-basf2 steering.py
-
+echo "Job finished on $(date)"
