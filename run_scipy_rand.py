@@ -13,12 +13,18 @@ import time
 from pathlib import Path
 from scipy.optimize import differential_evolution
 
-from src.optimization_config import (
+from src.scipy_opt_utils import (
+    init_worker,
+    cleanup_worker_files,
+    compute_param_hash,
+    get_worker_metrics_path,
+    update_metrics_csv,
+    merge_worker_metrics,
+    run_tracking_with_params,
     MAX_TRIALS,
     METRICS_FIELDS,
     PARAM_SPACE,
     RANDOM_SEED,
-    TRACKING_CMD,
 )
 
 # Configure logging
@@ -41,160 +47,21 @@ _trial_counter = 0
 METRICS_FIELDS = METRICS_FIELDS + ["worker_id", "param_hash"]
 
 
-def init_worker(worker_ids):
-    """Initialize worker-specific environment variables and counter."""
-    global _worker_id, _trial_counter
-    # Each process gets a worker ID based on its process ID
-    process_idx = multiprocessing.current_process()._identity[0] - 1
-    if process_idx < 0:  # Main process
-        _worker_id = 0
-    else:
-        _worker_id = worker_ids[process_idx % len(worker_ids)]
-    _trial_counter = 0
-    os.environ["WORKER_ID"] = str(_worker_id)
-    logger.info(f"Worker {_worker_id} initialized (PID: {os.getpid()})")
-
-
-def cleanup_worker_files():
-    """Clean up worker-specific parameter files."""
-    for param_file in Path().glob("params_worker_*.json"):
-        param_file.unlink(missing_ok=True)
-
-
-def compute_param_hash(params):
-    """Compute a short hash for the given parameter set."""
-    param_str = json.dumps(params, sort_keys=True)
-    return hashlib.sha1(param_str.encode()).hexdigest()[:10]
-
-
-def get_worker_params_path(worker_id):
-    """Get the worker-specific parameters file path."""
-    if worker_id is None:
-        raise ValueError("Worker ID must be provided")
-    return Path(f"params_worker_{worker_id:02d}.json")
-
-
-def get_worker_metrics_path(worker_id):
-    """Get the worker-specific metrics file path."""
-    if worker_id is None:
-        raise ValueError("Worker ID must be provided")
-    return Path(f"metrics_worker_{worker_id:02d}.csv")
-
-
-# --- Update Metrics CSV --
-def update_metrics_csv(params, elapsed, trial_number, worker_id, param_hash=None):
-    """Update worker-specific metrics CSV with trial results and return F1 score."""
-    if worker_id is None:
-        raise ValueError("Worker ID must be provided for thread-safe operation")
-
-    try:
-        # Read trial results
-        trial_metrics = Path(f"metrics_trial_{trial_number:03d}.csv")
-        with trial_metrics.open("r", newline="") as f:
-            reader = csv.DictReader(f)
-            row = list(reader)[-1]
-            f1_score = float(row["f1_score"])
-
-        # Update row with additional info
-        row.update(
-            {
-                "execution_time": f"{elapsed:.2f}",
-                "worker_id": str(worker_id),
-                "param_hash": param_hash if param_hash else "",
-                **{k: str(v) for k, v in params.items()},
-            }
-        )
-
-        # Append to worker-specific metrics file
-        worker_metrics = get_worker_metrics_path(worker_id)
-        is_new_file = not worker_metrics.exists()
-
-        with worker_metrics.open("a" if not is_new_file else "w", newline="") as f:
-            writer = csv.DictWriter(f, fieldnames=METRICS_FIELDS)
-            if is_new_file:
-                writer.writeheader()
-            writer.writerow(row)
-
-        return f1_score
-
-    except Exception as e:
-        print(
-            f"[ERROR] Worker {worker_id} Trial {trial_number}: Error processing metrics: {e}"
-        )
-        return 0.0
-
-    finally:
-        trial_metrics.unlink(missing_ok=True)
-
-
-def merge_worker_metrics():
-    """Merge all worker metrics files into a single metrics.csv, sorted by worker and trial."""
-    all_rows = []
-    for worker_file in sorted(Path().glob("metrics_worker_*.csv")):
-        with worker_file.open() as f:
-            all_rows.extend(list(csv.DictReader(f)))
-        worker_file.unlink()
-    if all_rows:
-        with open("metrics.csv", "w", newline="") as f:
-            writer = csv.DictWriter(f, fieldnames=METRICS_FIELDS)
-            writer.writeheader()
-            writer.writerows(
-                sorted(
-                    all_rows,
-                    key=lambda x: (int(x["worker_id"]), int(x.get("trial_number", 0))),
-                )
-            )
-        logger.info("Merged metrics saved to metrics.csv")
-
-
-# --- Run Tracking ---
-def run_tracking_with_params(params, trial_number, worker_id, param_hash=None):
-    """Execute tracking pipeline and return resulting F1 score."""
-
-    # Worker ID is required for thread-safe operation
-    if worker_id is None:
-        raise ValueError("Worker ID must be provided for thread-safe operation")
-    if param_hash is None:
-        param_hash = compute_param_hash(params)
-    logger.info(
-        f"[START] Worker {worker_id} | Trial {trial_number} | param_hash: {param_hash} | Params: {params}"
-    )
-
-    # Save parameters to worker-specific JSON file
-    params_path = get_worker_params_path(worker_id)
-    with params_path.open("w") as f:
-        json.dump(params, f, indent=2)
-
-    # Run tracking with worker-specific params and metrics files
-    metrics_path = get_worker_metrics_path(worker_id)
-    start = time.time()
-
-    try:
-        logger.debug(
-            f"Worker {worker_id} | Trial {trial_number} running tracking command with --params {params_path} --metrics {metrics_path}"
-        )
-        subprocess.run(
-            TRACKING_CMD
-            + ["--params", str(params_path), "--metrics", str(metrics_path)],
-            check=True,
-        )
-        elapsed = round(time.time() - start, 2)
-        logger.info(
-            f"Worker {worker_id} | Trial {trial_number} execution time: {elapsed:.1f}s"
-        )
-        return update_metrics_csv(
-            params, elapsed, trial_number, worker_id, param_hash=param_hash
-        )
-    except subprocess.CalledProcessError:
-        logger.error(
-            f"Worker {worker_id} | Trial {trial_number}: basf2 execution failed."
-        )
-        return 0.0
-
-
-# --- Objective Function ---
+# Objective function
 def trial_objective(vector):
-    """Run a trial with given parameters and return negative F1 score for minimization."""
+    """
+    Run a trial with given parameters and return negative F1 score for minimization.
+
+    Parameters
+    ----------
+    vector : list
+        List of parameter values to be used for the trial.
+
+    Returns
+    -------
+    float
+        Negative F1 score of the trial.
+    """
     global _trial_counter, _worker_id
 
     # Convert vector to parameter values
@@ -218,10 +85,11 @@ def trial_objective(vector):
         f"[TRIAL END] Worker {_worker_id} | Trial {_trial_counter} | F1: {f1_score:.4f} | param_hash: {param_hash}"
     )
 
+    # Return negative F1 score for minimization
     return -f1_score
 
 
-# --- Main ---
+# Main function
 def main():
     """Run optimization to find best tracking parameters."""
 
@@ -402,6 +270,5 @@ def main():
     print("Best parameters saved to best_params.json\n")
 
 
-# --- Entry Point ---
 if __name__ == "__main__":
     main()
