@@ -94,40 +94,56 @@ class TrackMetrics(basf2.Module):
 
     def terminate(self):
 
-        # calculate meterics
+        # efficiency
         efficiency = (
             self.matched_mc_particles / self.selected_mc_particles
             if self.selected_mc_particles > 0
             else 0
         )
+
+        # purity
         purity = (
             self.matched_reco_tracks / self.selected_reco_tracks
             if self.selected_reco_tracks > 0
             else 0
         )
 
+        # f1 score
         f1 = (2 * efficiency * purity) / (efficiency + purity + 1e-8)
 
         print(f"\nEfficiency: {efficiency:.4f}, Purity: {purity:.4f}, F1: {f1:.4f}")
 
-        # Save metrics and parameters
+        # Header order
+        field_order = [
+            *list(self.params.keys()),  # Parameters first
+            "efficiency",
+            "purity",
+            "f1",
+            "finalstate",  # Then metrics
+            "execution_time",
+            "worker_id",
+            "trial_number",  # Then execution info
+        ]
+
+        # Add metrics
         row = {
-            **self.params,
-            "efficiency": efficiency,
-            "purity": purity,
-            "f1_score": f1,
-            "final_state": self.finalstate,
-            "execution_time": "",  # Leave empty for run_search.py to fill
+            **self.params,  # Parameters from JSON
+            "efficiency": f"{efficiency:.4f}",  # Efficiency
+            "purity": f"{purity:.4f}",  # Purity
+            "f1": f"{f1:.4f}",  # F1 score
+            "finalstate": self.finalstate,  # Final state
+            "execution_time": "",  # Left empty for optimization scripts
+            "worker_id": "",  # Left empty for optimization scripts
+            "trial_number": "",  # Left empty for optimization scripts
         }
 
         file_exists = os.path.exists(self.filename)
         with open(self.filename, "a", newline="") as f:
-            writer = csv.DictWriter(f, fieldnames=row.keys())
-
+            writer = csv.DictWriter(f, fieldnames=field_order)
             if not file_exists:
                 writer.writeheader()
-
             writer.writerow(row)
+
         return 0
 
 

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#BSUB -J Optz                        # Job name
+#BSUB -J mjob                        # Job name, for job array "mjob[1-10]"
 #BSUB -P aakram                      # Account name (project ID)
 #BSUB -G b2_belle2                   # Group for accounting purposes
 #BSUB -n 8                           # Number of cores (total across all nodes)
@@ -17,8 +17,8 @@ mkdir -p logs
 source /cvmfs/belle.cern.ch/tools/b2setup release-09-00-00
 
 echo "Running job $LSB_JOBID on $(hostname)"
+echo "Running job index: $LSB_JOBINDEX"
+
 echo "Job started on $(date)"
-
 basf2 start_sim.py
-
 echo "Job finished on $(date)"
