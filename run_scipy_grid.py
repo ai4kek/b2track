@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
 
+# python3 run_scipy_grid.py
+# python3 run_scipy_grid.py --workers 2
+# bsub -J "grid[1-5]" python3 run_scipy_grid.py --cluster
+
 import argparse
 import itertools
 import json
