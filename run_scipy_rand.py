@@ -2,8 +2,8 @@
 
 import argparse
 import csv
-import json
 import hashlib
+import json
 import logging
 import multiprocessing
 import os
@@ -11,20 +11,21 @@ import subprocess
 import sys
 import time
 from pathlib import Path
+
 from scipy.optimize import differential_evolution
 
 from src.scipy_opt_utils import (
-    init_worker,
-    cleanup_worker_files,
-    compute_param_hash,
-    get_worker_metrics_path,
-    update_metrics_csv,
-    merge_worker_metrics,
-    run_tracking_with_params,
     MAX_TRIALS,
     METRICS_FIELDS,
     PARAM_SPACE,
     RANDOM_SEED,
+    cleanup_worker_files,
+    compute_param_hash,
+    get_worker_metrics_path,
+    init_worker,
+    merge_worker_metrics,
+    run_tracking_with_params,
+    update_metrics_csv,
 )
 
 # Configure logging

@@ -10,8 +10,8 @@ from pathlib import Path
 
 import ray
 from ray import tune
-from ray.tune.schedulers import ASHAScheduler
 from ray.tune.integration.sqlite import SQLiteLoggerCallback
+from ray.tune.schedulers import ASHAScheduler
 from ray.tune.search.basic_variant import BasicVariantGenerator
 
 from src.optimization_config import (

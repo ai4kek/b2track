@@ -9,7 +9,7 @@
 ##########################################################################
 
 """
-To run this script: 
+To run this script:
 basf2 tracking_performance.py -- -p mixed -i dataset/mixed_mdst.root
 """
 

@@ -11,8 +11,8 @@
 # Intended to run with run_search.py script as a subprocess for different
 # trails with specific params. For just tracking, run the start_rec.py.
 
-import json
 import argparse
+import json
 
 import basf2
 import svd
