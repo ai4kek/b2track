@@ -128,8 +128,10 @@ def main():
     3. Single worker
     """
     # Clean up any leftover worker files and output files from previous runs
+    # to ensure we start from a clean state
     main_logger.info("Cleaning up worker files from previous runs")
     cleanup_worker_files(clean_output_files=True)
+    main_logger.info("Starting with a clean state")
 
     # Parse arguments
     parser = argparse.ArgumentParser(description="Grid Search.")
@@ -187,11 +189,6 @@ def main():
             f"Job {job_id} processing trials {start_trial+1} to {end_trial}"
         )
 
-        # Initialize worker-specific files
-        metrics_file = get_worker_metrics_path(job_id)
-        if metrics_file.exists():
-            metrics_file.unlink()  # Start fresh
-
         # Process this job's parameter combinations
         for trial_num, param_set in enumerate(grid_subset, start_trial + 1):
             worker_logger.info(f"Processing trial {trial_num}/{NUM_GRID_POINTS}")
@@ -202,16 +199,11 @@ def main():
         )
         main_logger.info(f"Job {job_id} complete - processed {len(grid_subset)} trials")
 
-        # If this is the last job, merge all results
-        if job_id == n_jobs - 1:
-            main_logger.info("Last job completed, compiling results...")
-            worker_logger.info("Last job completed, compiling results...")
-
-            # Merge metrics into final CSV
-            merge_worker_metrics(METRICS_FIELDS, "metrics_all.csv")
-            main_logger.info("All metrics merged to metrics_all.csv")
-            main_logger.info(f"Total jobs completed: {n_jobs}")
-            main_logger.info(f"Total trials processed: {NUM_GRID_POINTS}")
+        # In cluster mode, each job just processes its own chunk
+        # Merging and extracting best results will be done separately
+        # by a post-processing step or manually after all jobs complete
+        worker_logger.info(f"Job {job_id} completed successfully")
+        main_logger.info(f"Job {job_id} completed successfully")
 
     else:
         # Regular local execution
@@ -271,31 +263,41 @@ def main():
             merge_worker_metrics(METRICS_FIELDS, "metrics_all.csv")
             main_logger.info("Metrics merged to metrics_all.csv")
 
-    # Extract and display best results
-    main_logger.info("Extracting best results from metrics_all.csv...")
-    best_results = extract_best_results("metrics_all.csv")
+    # For all modes, extract and display best results
+    # For cluster mode, this will be done by a post-processing step or manually
+    # after all jobs complete
+    if not args.cluster:
+        main_logger.info("Merging worker metrics files...")
+        merge_worker_metrics(METRICS_FIELDS, "metrics_all.csv")
+        main_logger.info("All metrics merged to metrics_all.csv")
 
-    if best_results is None:
-        main_logger.error("No valid results found in metrics_all.csv")
-        main_logger.error(
-            "Grid search completed with errors - no best results available"
-        )
-        sys.exit(1)
+        main_logger.info("Extracting best results from metrics_all.csv...")
+        best_results = extract_best_results("metrics_all.csv")
 
-    # Save best results to JSON
-    with open("best_results.json", "w") as f:
-        json.dump(best_results, f, indent=2)
+        if best_results is None:
+            main_logger.error("No valid results found in metrics_all.csv")
+            main_logger.error(
+                "Grid search completed with errors - no best results available"
+            )
+            sys.exit(1)
 
-    main_logger.info("Grid search completed successfully!")
-    main_logger.info("Best results saved to best_results.json")
-    main_logger.info(f"🏆 Best F1 Score: {best_results['metrics']['f1']:.4f}")
-    main_logger.info("Best Parameters:")
-    for param_name, value in best_results["parameters"].items():
-        main_logger.info(f"  {param_name}: {value}")
+        # Save best results to JSON
+        with open("best_results.json", "w") as f:
+            json.dump(best_results, f, indent=2)
 
-    # Clean up worker files after successful completion
-    main_logger.info("Cleaning up worker files")
-    cleanup_worker_files()
+    if not args.cluster:
+        main_logger.info("Grid search completed successfully!")
+        main_logger.info("Best results saved to best_results.json")
+        main_logger.info(f"🏆 Best F1 Score: {best_results['metrics']['f1']:.4f}")
+        main_logger.info("Best Parameters:")
+        for param_name, value in best_results["parameters"].items():
+            main_logger.info(f"  {param_name}: {value}")
+    else:
+        main_logger.info("Grid search job completed")
+
+    # We don't clean up worker files after completion
+    # This allows inspection of individual worker files for debugging
+    main_logger.info("Grid search completed - worker files preserved for inspection")
 
 
 if __name__ == "__main__":
