@@ -107,14 +107,32 @@ def get_worker_metrics_path(worker_id):
     return Path(f"metrics_worker_{worker_id:03d}.csv")
 
 
-def cleanup_worker_files():
-    """Clean up worker-specific files (params and metrics)."""
+def cleanup_worker_files(clean_output_files=True):
+    """Clean up worker-specific files (params and metrics).
+
+    Args:
+        clean_output_files (bool): If True, also clean output files (best_results.json, metrics_all.csv)
+    """
     # Clean parameter files
     for param_file in Path().glob("params_worker_*.json"):
         param_file.unlink(missing_ok=True)
     # Clean metrics files
     for metrics_file in Path().glob("metrics_worker_*.csv"):
         metrics_file.unlink(missing_ok=True)
+
+    # Clean output files if requested
+    if clean_output_files:
+        # Clean best results file
+        best_results_file = Path("best_results.json")
+        if best_results_file.exists():
+            best_results_file.unlink()
+            logger.info("Removed existing best_results.json")
+
+        # Clean merged metrics file
+        metrics_all_file = Path("metrics_all.csv")
+        if metrics_all_file.exists():
+            metrics_all_file.unlink()
+            logger.info("Removed existing metrics_all.csv")
 
 
 def update_worker_metrics(worker_id, trial_number, elapsed, metrics_path):

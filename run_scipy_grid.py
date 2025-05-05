@@ -149,8 +149,8 @@ def main():
     2. Local multiprocessing
     3. Single worker
     """
-    # Clean up any leftover worker files from previous runs
-    cleanup_worker_files()
+    # Clean up any leftover worker files and output files from previous runs
+    cleanup_worker_files(clean_output_files=True)
 
     # Parse arguments
     parser = argparse.ArgumentParser(description="Grid Search.")
