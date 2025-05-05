@@ -151,10 +151,14 @@ def main():
         if "LSB_JOBINDEX" in os.environ:  # LSF
             job_id = int(os.environ["LSB_JOBINDEX"])
             n_jobs = int(os.environ["LSB_JOBINDEX_END"])
+            # Initialize worker environment and get worker-specific logger
+            logger = init_worker(job_id)
             logger.info(f"Running as LSF job {job_id}/{n_jobs}")
         elif "SLURM_ARRAY_TASK_ID" in os.environ:  # Slurm
             job_id = int(os.environ["SLURM_ARRAY_TASK_ID"])
             n_jobs = int(os.environ["SLURM_ARRAY_TASK_COUNT"])
+            # Initialize worker environment and get worker-specific logger
+            logger = init_worker(job_id)
             logger.info(f"Running as Slurm job {job_id}/{n_jobs}")
         else:
             raise RuntimeError("No cluster environment variables found")
@@ -166,9 +170,6 @@ def main():
         start_trial = (job_id - 1) * trials_per_job
         end_trial = min(start_trial + trials_per_job, NUM_GRID_POINTS)
         grid_subset = GRID[start_trial:end_trial]
-
-        # Initialize worker environment and get worker-specific logger
-        logger = init_worker(job_id)
 
         # Skip if no trials to process
         if not grid_subset:
