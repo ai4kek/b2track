@@ -45,9 +45,9 @@ from src.scipy_opt_utils import (
     update_worker_metrics,
 )
 
-# Get the main process logger
-logger = get_worker_logger()
-logger.info("Grid search started")
+# Get the main process logger (no worker_id means main process)
+main_logger = get_worker_logger()
+main_logger.info("Grid search started")
 
 # Generate the grid of all parameter combinations
 GRID = list(itertools.product(*[PARAM_SPACE[k] for k in PARAM_SPACE.keys()]))
@@ -128,6 +128,7 @@ def main():
     3. Single worker
     """
     # Clean up any leftover worker files and output files from previous runs
+    main_logger.info("Cleaning up worker files from previous runs")
     cleanup_worker_files(clean_output_files=True)
 
     # Parse arguments
@@ -152,18 +153,21 @@ def main():
             job_id = int(os.environ["LSB_JOBINDEX"])
             n_jobs = int(os.environ["LSB_JOBINDEX_END"])
             # Initialize worker environment and get worker-specific logger
-            logger = init_worker(job_id)
-            logger.info(f"Running as LSF job {job_id}/{n_jobs}")
+            worker_logger = init_worker(job_id)
+            main_logger.info(f"Initialized worker {job_id} for LSF job")
+            worker_logger.info(f"Running as LSF job {job_id}/{n_jobs}")
         elif "SLURM_ARRAY_TASK_ID" in os.environ:  # Slurm
             job_id = int(os.environ["SLURM_ARRAY_TASK_ID"])
             n_jobs = int(os.environ["SLURM_ARRAY_TASK_COUNT"])
             # Initialize worker environment and get worker-specific logger
-            logger = init_worker(job_id)
-            logger.info(f"Running as Slurm job {job_id}/{n_jobs}")
+            worker_logger = init_worker(job_id)
+            main_logger.info(f"Initialized worker {job_id} for Slurm job")
+            worker_logger.info(f"Running as Slurm job {job_id}/{n_jobs}")
         else:
             raise RuntimeError("No cluster environment variables found")
 
-        logger.info(f"Grid Search with {n_jobs} Jobs")
+        main_logger.info(f"Grid Search with {n_jobs} Jobs")
+        worker_logger.info(f"Grid Search with {n_jobs} Jobs")
 
         # Calculate chunk for this job
         trials_per_job = (NUM_GRID_POINTS + n_jobs - 1) // n_jobs
@@ -173,10 +177,15 @@ def main():
 
         # Skip if no trials to process
         if not grid_subset:
-            logger.info(f"Job {job_id} has no trials to process (grid exhausted)")
+            worker_logger.info(
+                f"Job {job_id} has no trials to process (grid exhausted)"
+            )
+            main_logger.info(f"Job {job_id} has no trials to process (grid exhausted)")
             sys.exit(0)
 
-        logger.info(f"Job {job_id} processing trials {start_trial+1} to {end_trial}")
+        worker_logger.info(
+            f"Job {job_id} processing trials {start_trial+1} to {end_trial}"
+        )
 
         # Initialize worker-specific files
         metrics_file = get_worker_metrics_path(job_id)
@@ -185,27 +194,31 @@ def main():
 
         # Process this job's parameter combinations
         for trial_num, param_set in enumerate(grid_subset, start_trial + 1):
-            logger.info(f"Processing trial {trial_num}/{NUM_GRID_POINTS}")
+            worker_logger.info(f"Processing trial {trial_num}/{NUM_GRID_POINTS}")
             trial_objective(trial_num, param_set, job_id)
 
-        logger.info(f"Job {job_id} complete - processed {len(grid_subset)} trials")
+        worker_logger.info(
+            f"Job {job_id} complete - processed {len(grid_subset)} trials"
+        )
+        main_logger.info(f"Job {job_id} complete - processed {len(grid_subset)} trials")
 
         # If this is the last job, merge all results
         if job_id == n_jobs - 1:
-            logger.info("Last job completed, compiling results...")
+            main_logger.info("Last job completed, compiling results...")
+            worker_logger.info("Last job completed, compiling results...")
 
             # Merge metrics into final CSV
             merge_worker_metrics(METRICS_FIELDS, "metrics_all.csv")
-            logger.info("All metrics merged to metrics_all.csv")
-            logger.info(f"Total jobs completed: {n_jobs}")
-            logger.info(f"Total trials processed: {NUM_GRID_POINTS}")
+            main_logger.info("All metrics merged to metrics_all.csv")
+            main_logger.info(f"Total jobs completed: {n_jobs}")
+            main_logger.info(f"Total trials processed: {NUM_GRID_POINTS}")
 
     else:
         # Regular local execution
         if (
             args.workers >= 1
         ):  # Changed from > 1 to >= 1 to handle --workers 1 the same way
-            logger.info(f"Grid Search with {args.workers} Workers")
+            main_logger.info(f"Grid Search with {args.workers} Workers")
 
             # Divide grid points among workers
             grid_chunks = [GRID[i :: args.workers] for i in range(args.workers)]
@@ -215,11 +228,11 @@ def main():
                 (worker_id, chunk) for worker_id, chunk in enumerate(grid_chunks)
             ]
 
-            logger.info(
+            main_logger.info(
                 f"Distributing {len(GRID)} trials across {args.workers} workers"
             )
             for worker_id, chunk in worker_args:
-                logger.info(f"Worker {worker_id} assigned {len(chunk)} trials")
+                main_logger.info(f"Worker {worker_id} assigned {len(chunk)} trials")
 
             # Create pool and run grid search - each worker processes its entire chunk
             with Pool(processes=args.workers) as pool:
@@ -229,55 +242,59 @@ def main():
                 # Sum up total trials processed
                 total_trials = sum(results)
 
-                logger.info(
+                main_logger.info(
                     f"Completed {total_trials} trials across {args.workers} workers"
                 )
 
             # Merge worker metrics files
             merge_worker_metrics(METRICS_FIELDS, "metrics_all.csv")
-            logger.info("All metrics merged to metrics_all.csv")
+            main_logger.info("All metrics merged to metrics_all.csv")
 
         else:
             # Single worker mode (only when --workers is not specified)
-            logger.info("Grid Search with Single Worker")
+            main_logger.info("Grid Search with Single Worker")
             worker_id = 0
 
             # Initialize worker environment and get worker-specific logger
-            logger = init_worker(worker_id)
+            worker_logger = init_worker(worker_id)
 
             # Process all parameter combinations
             for trial_num, param_set in enumerate(GRID, 1):
-                logger.info(f"Processing trial {trial_num}/{NUM_GRID_POINTS}")
+                worker_logger.info(f"Processing trial {trial_num}/{NUM_GRID_POINTS}")
                 trial_objective(trial_num, param_set, worker_id)
 
-            logger.info(f"Completed {NUM_GRID_POINTS} trials")
+            worker_logger.info(f"Completed {NUM_GRID_POINTS} trials")
+            main_logger.info(f"Completed {NUM_GRID_POINTS} trials")
 
             # Merge worker metrics file to metrics_all.csv (for consistency with other modes)
-            logger.info("Merging worker metrics to metrics_all.csv...")
+            main_logger.info("Merging worker metrics to metrics_all.csv...")
             merge_worker_metrics(METRICS_FIELDS, "metrics_all.csv")
-            logger.info("Metrics merged to metrics_all.csv")
+            main_logger.info("Metrics merged to metrics_all.csv")
 
     # Extract and display best results
-    logger.info("Extracting best results from metrics_all.csv...")
+    main_logger.info("Extracting best results from metrics_all.csv...")
     best_results = extract_best_results("metrics_all.csv")
 
     if best_results is None:
-        logger.error("No valid results found in metrics_all.csv")
-        logger.error("Grid search completed with errors - no best results available")
+        main_logger.error("No valid results found in metrics_all.csv")
+        main_logger.error(
+            "Grid search completed with errors - no best results available"
+        )
         sys.exit(1)
 
     # Save best results to JSON
     with open("best_results.json", "w") as f:
         json.dump(best_results, f, indent=2)
 
-    logger.info("Grid search completed successfully!")
-    logger.info("Best results saved to best_results.json")
-    logger.info(f"🏆 Best F1 Score: {best_results['metrics']['f1']:.4f}")
-    logger.info("Best Parameters:")
+    main_logger.info("Grid search completed successfully!")
+    main_logger.info("Best results saved to best_results.json")
+    main_logger.info(f"🏆 Best F1 Score: {best_results['metrics']['f1']:.4f}")
+    main_logger.info("Best Parameters:")
     for param_name, value in best_results["parameters"].items():
-        logger.info(f"  {param_name}: {value}")
+        main_logger.info(f"  {param_name}: {value}")
 
     # Clean up worker files after successful completion
+    main_logger.info("Cleaning up worker files")
     cleanup_worker_files()
 
 
