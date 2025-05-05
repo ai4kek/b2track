@@ -7,8 +7,8 @@
 #BSUB -R "span[hosts=1]"             # Request nodes
 #BSUB -q s                           # Submit to queue 's' (short jobs < 3h)
 #BSUB -W 02:55                       # Runtime (hh:mm)
-#BSUB -o logs/%J.out                 # Standard output file (%J is job ID)
-#BSUB -e logs/%J.err                 # Standard error file
+#BSUB -o logs/sim_%J.out             # Standard output file (%J is job ID)
+#BSUB -e logs/sim_%J.err             # Standard error file
 #BSUB -u adeel.akram@physics.uu.se   # Email address for notifications
 #BSUB -B                             # Send email at job start
 #BSUB -N                             # Send email at job completion
