@@ -14,33 +14,72 @@ import sys
 import time
 from pathlib import Path
 
-# Configure logging
+# Configure logging directory
 log_dir = Path("logs")
-log_dir.mkdir(exist_ok=True)
-log_file = log_dir / "scipy_opt_utils.log"
+# Ensure logs directory exists
+try:
+    log_dir.mkdir(exist_ok=True, mode=0o755)
+except Exception as e:
+    print(f"Warning: Could not create logs directory: {e}")
+    # Try to continue anyway
 
-# Remove existing log file if it exists
-if log_file.exists():
-    log_file.unlink()
-
-# Create a logger with the name "scipy_opt_utils"
-logger = logging.getLogger("scipy_opt_utils")
-logger.setLevel(logging.INFO)
-
-# Create handlers
-file_handler = logging.FileHandler(log_file)
-stream_handler = logging.StreamHandler(sys.stdout)
-
-# Create formatter and add it to the handlers
-formatter = logging.Formatter(
+# Standard formatter for all loggers
+FORMATTER = logging.Formatter(
     "%(asctime)s - %(processName)s - %(levelname)s - %(message)s"
 )
-file_handler.setFormatter(formatter)
-stream_handler.setFormatter(formatter)
 
-# Add handlers to logger
-logger.addHandler(file_handler)
-logger.addHandler(stream_handler)
+
+def get_worker_logger(worker_id=None):
+    """
+    Get a logger for a specific worker or the main process.
+
+    Args:
+        worker_id (int, optional): Worker ID. If None, returns the main process logger.
+
+    Returns:
+        Logger: A configured logger instance
+    """
+    if worker_id is None:
+        # Main process logger
+        logger_name = "grid_main"
+        log_file = log_dir / "logs_main.log"
+    else:
+        # Worker-specific logger
+        logger_name = f"grid_worker_{worker_id:03d}"
+        log_file = log_dir / f"logs_worker_{worker_id:03d}.log"
+
+    # Create logger
+    logger = logging.getLogger(logger_name)
+
+    # Only configure if not already configured
+    if not logger.handlers:
+        logger.setLevel(logging.INFO)
+        logger.propagate = False  # Don't propagate to parent logger
+
+        # Always add console handler
+        stream_handler = logging.StreamHandler(sys.stdout)
+        stream_handler.setFormatter(FORMATTER)
+        logger.addHandler(stream_handler)
+
+        # Try to add file handler
+        try:
+            # Remove existing log file if it exists
+            if log_file.exists():
+                log_file.unlink()
+
+            # Create new file handler
+            file_handler = logging.FileHandler(log_file)
+            file_handler.setFormatter(FORMATTER)
+            logger.addHandler(file_handler)
+        except Exception as e:
+            print(f"Warning: Could not create log file for {logger_name}: {e}")
+            print(f"Continuing with console logging only for {logger_name}")
+
+    return logger
+
+
+# Create a default logger for the module
+logger = get_worker_logger()
 
 # Parameter space
 PARAM_SPACE = {
@@ -75,16 +114,25 @@ RANDOM_SEED = 42
 
 
 # Helper functions
-def init_worker(worker_id, logger=None):
+def init_worker(worker_id):
     """Initialize worker-specific environment and logging.
 
     Args:
         worker_id (int): The worker ID for this process
-        logger (Logger, optional): Logger instance to use for logging
+
+    Returns:
+        Logger: The worker's logger
     """
+    # Set environment variable for worker ID
     os.environ["WORKER_ID"] = str(worker_id)
-    if logger:
-        logger.info(f"Worker {worker_id} initialized (PID: {os.getpid()})")
+
+    # Get logger for this worker
+    logger = get_worker_logger(worker_id)
+
+    # Log initialization
+    logger.info(f"Worker {worker_id} initialized (PID: {os.getpid()})")
+
+    return logger
 
 
 def compute_param_hash(params):

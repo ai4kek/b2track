@@ -27,17 +27,16 @@ Output:
 import argparse
 import itertools
 import json
-import logging
 import os
 import sys
 from multiprocessing import Pool
-from pathlib import Path
 
 from src.scipy_opt_utils import (
     METRICS_FIELDS,
     PARAM_SPACE,
     cleanup_worker_files,
     extract_best_results,
+    get_worker_logger,
     get_worker_metrics_path,
     get_worker_params_path,
     init_worker,
@@ -46,33 +45,9 @@ from src.scipy_opt_utils import (
     update_worker_metrics,
 )
 
-# Configure logging
-log_dir = Path("logs")
-log_dir.mkdir(exist_ok=True)
-log_file = log_dir / "grid_optimizer.log"
-
-# Remove existing log file if it exists
-if log_file.exists():
-    log_file.unlink()
-
-# Create a logger with the name "grid_optimizer"
-logger = logging.getLogger("grid_optimizer")
-logger.setLevel(logging.INFO)
-
-# Create handlers
-file_handler = logging.FileHandler(log_file)
-stream_handler = logging.StreamHandler(sys.stdout)
-
-# Create formatter and add it to the handlers
-formatter = logging.Formatter(
-    "%(asctime)s - %(processName)s - %(levelname)s - %(message)s"
-)
-file_handler.setFormatter(formatter)
-stream_handler.setFormatter(formatter)
-
-# Add handlers to logger
-logger.addHandler(file_handler)
-logger.addHandler(stream_handler)
+# Get the main process logger
+logger = get_worker_logger()
+logger.info("Grid search started")
 
 # Generate the grid of all parameter combinations
 GRID = list(itertools.product(*[PARAM_SPACE[k] for k in PARAM_SPACE.keys()]))
@@ -92,20 +67,23 @@ def process_chunk(worker_id, chunk):
     Returns:
     int: Number of trials processed
     """
-    # Initialize worker environment and logging
-    init_worker(worker_id, logger)
+    # Initialize worker environment and get worker-specific logger
+    worker_logger = init_worker(worker_id)
+    worker_logger.info(f"Worker {worker_id} starting to process {len(chunk)} trials")
 
     trials_processed = 0
     for i, param_set in enumerate(chunk, 1):
         # Calculate global trial number if needed
         trial_num = i
-        logger.info(f"Worker {worker_id} processing trial {trial_num}/{len(chunk)}")
+        worker_logger.info(
+            f"Worker {worker_id} processing trial {trial_num}/{len(chunk)}"
+        )
 
         # Process this parameter set
         trial_objective(trial_num, param_set, worker_id)
         trials_processed += 1
 
-    logger.info(f"Worker {worker_id} completed {trials_processed} trials")
+    worker_logger.info(f"Worker {worker_id} completed {trials_processed} trials")
     return trials_processed
 
 
