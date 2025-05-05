@@ -167,8 +167,8 @@ def main():
         end_trial = min(start_trial + trials_per_job, NUM_GRID_POINTS)
         grid_subset = GRID[start_trial:end_trial]
 
-        # Initialize worker environment
-        init_worker(job_id, logger)
+        # Initialize worker environment and get worker-specific logger
+        logger = init_worker(job_id)
 
         # Skip if no trials to process
         if not grid_subset:
@@ -241,8 +241,8 @@ def main():
             logger.info("Grid Search with Single Worker")
             worker_id = 0
 
-            # Initialize worker environment
-            init_worker(worker_id, logger)
+            # Initialize worker environment and get worker-specific logger
+            logger = init_worker(worker_id)
 
             # Process all parameter combinations
             for trial_num, param_set in enumerate(GRID, 1):
