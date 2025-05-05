@@ -4,14 +4,12 @@ All functions in this file are shared between run_scipy_rand.py and run_scipy_gr
 Docstrings and comments are unified for consistency.
 """
 
-import atexit
 import csv
 import hashlib
 import json
 import logging
 import multiprocessing
 import os
-import signal
 import subprocess
 import sys
 import time
@@ -22,12 +20,28 @@ log_dir = Path("logs")
 log_dir.mkdir(exist_ok=True)
 log_file = log_dir / "scipy_opt_utils.log"
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(processName)s - %(levelname)s - %(message)s",
-    handlers=[logging.FileHandler(log_file), logging.StreamHandler(sys.stdout)],
-)
+# Remove existing log file if it exists
+if log_file.exists():
+    log_file.unlink()
+
+# Create a logger with the name "scipy_opt_utils"
 logger = logging.getLogger("scipy_opt_utils")
+logger.setLevel(logging.INFO)
+
+# Create handlers
+file_handler = logging.FileHandler(log_file)
+stream_handler = logging.StreamHandler(sys.stdout)
+
+# Create formatter and add it to the handlers
+formatter = logging.Formatter(
+    "%(asctime)s - %(processName)s - %(levelname)s - %(message)s"
+)
+file_handler.setFormatter(formatter)
+stream_handler.setFormatter(formatter)
+
+# Add handlers to logger
+logger.addHandler(file_handler)
+logger.addHandler(stream_handler)
 
 # Parameter space
 PARAM_SPACE = {
@@ -122,7 +136,7 @@ def update_worker_metrics(worker_id, trial_number, elapsed, metrics_path):
 
     # Update the last row
     last_row = reader[-1]
-    last_row["execution_time"] = elapsed
+    last_row["execution_time"] = f"{elapsed:.2f}"  # Format with 2 decimal places
     last_row["worker_id"] = worker_id
     last_row["trial_number"] = trial_number
 
@@ -288,9 +302,9 @@ def extract_best_results(metrics_file="metrics_all.csv"):
 def run_tracking_with_params(
     trial_number, worker_id, params_path, metrics_path, max_retries=3
 ):
-    """Execute tracking pipeline and return resulting F1 score.
-    Writes parameters to a worker-specific JSON file, runs the
-    tracking command, and parses the F1 score from stdout.
+    """Execute tracking pipeline and return execution time.
+    Writes parameters to a worker-specific JSON file and runs the tracking command.
+    The F1 score is written directly to the metrics file by the tracking command.
 
     Args:
         trial_number: Trial sequence number
@@ -298,6 +312,9 @@ def run_tracking_with_params(
         params_path: Path to parameter JSON file
         metrics_path: Path to metrics CSV file
         max_retries: Maximum number of retries on failure
+
+    Returns:
+        float: Elapsed execution time in seconds
     """
 
     for attempt in range(max_retries):
@@ -312,27 +329,36 @@ def run_tracking_with_params(
             # Convert command list to string for shell=True
             cmd_str = " ".join(cmd)
 
-            logger.info(f"Running command: {cmd_str}")
+            logger.info(f"Worker {worker_id}: Running command: {cmd_str}")
 
+            # Run the command and display output
             result = subprocess.run(
                 cmd_str,
                 shell=True,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
-                check=True,
+                check=True,  # This will raise an exception if the command fails
                 encoding="utf-8",
                 timeout=3600,  # 1 hour timeout
             )
+
+            # Log the output from run_tracking_svd.py
+            if result.stdout:
+                logger.info(
+                    f"Worker {worker_id}, Trial {trial_number} stdout:\n{result.stdout}"
+                )
+            if result.stderr:
+                logger.warning(
+                    f"Worker {worker_id}, Trial {trial_number} stderr:\n{result.stderr}"
+                )
             elapsed = time.time() - start
 
-            # Parse F1 score from stdout (last line)
-            output_lines = result.stdout.strip().split("\n")
-            f1_score = float(output_lines[-1])
-            return f1_score, elapsed
+            # Return elapsed time
+            return elapsed
 
         except subprocess.TimeoutExpired:
             logger.error(
-                f"Trial {trial_number}: Tracking command timed out after 1 hour"
+                f"Worker {worker_id}, Trial {trial_number}: Tracking command timed out after 1 hour"
             )
             if attempt < max_retries - 1:
                 logger.info(f"Retrying... (attempt {attempt + 1}/{max_retries})")
@@ -340,16 +366,22 @@ def run_tracking_with_params(
                 continue
 
         except Exception as e:
-            logger.error(f"Trial {trial_number}: Tracking command failed: {e}")
+            logger.error(
+                f"Worker {worker_id}, Trial {trial_number}: Tracking command failed: {e}"
+            )
             if attempt < max_retries - 1:
                 logger.info(f"Retrying... (attempt {attempt + 1}/{max_retries})")
                 time.sleep(5)  # Wait before retry
                 continue
 
-    return 0.0, 0.0
+    # If all attempts failed, return 0.0 as the elapsed time
+    logger.error(
+        f"Worker {worker_id}, Trial {trial_number}: All {max_retries} attempts failed"
+    )
+    return 0.0
 
 
-def print_grid_summary(n_jobs=None):
+def print_grid_summary(n_jobs=None, NUM_GRID_POINTS=None):
     """Print a summary of the grid search space and job distribution."""
     header = "Grid Search Summary"
     separator = "=" * 60

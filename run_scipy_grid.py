@@ -29,7 +29,6 @@ import itertools
 import json
 import logging
 import os
-import shutil
 import sys
 from multiprocessing import Pool
 from pathlib import Path
@@ -37,6 +36,7 @@ from pathlib import Path
 from src.scipy_opt_utils import (
     METRICS_FIELDS,
     PARAM_SPACE,
+    cleanup_worker_files,
     extract_best_results,
     get_worker_metrics_path,
     get_worker_params_path,
@@ -49,14 +49,30 @@ from src.scipy_opt_utils import (
 # Configure logging
 log_dir = Path("logs")
 log_dir.mkdir(exist_ok=True)
-log_file = log_dir / "grid_optimization.log"
+log_file = log_dir / "grid_optimizer.log"
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(processName)s - %(levelname)s - %(message)s",
-    handlers=[logging.FileHandler(log_file), logging.StreamHandler(sys.stdout)],
-)
+# Remove existing log file if it exists
+if log_file.exists():
+    log_file.unlink()
+
+# Create a logger with the name "grid_optimizer"
 logger = logging.getLogger("grid_optimizer")
+logger.setLevel(logging.INFO)
+
+# Create handlers
+file_handler = logging.FileHandler(log_file)
+stream_handler = logging.StreamHandler(sys.stdout)
+
+# Create formatter and add it to the handlers
+formatter = logging.Formatter(
+    "%(asctime)s - %(processName)s - %(levelname)s - %(message)s"
+)
+file_handler.setFormatter(formatter)
+stream_handler.setFormatter(formatter)
+
+# Add handlers to logger
+logger.addHandler(file_handler)
+logger.addHandler(stream_handler)
 
 # Initialize global variables for worker tracking
 _worker_id = 0
@@ -70,7 +86,7 @@ NUM_GRID_POINTS = len(GRID)
 # Objective Function
 def trial_objective(trial_number, param_values, worker_id=None):
     """
-    Convert parameter values to dictionary, run tracking, and return F1 score.
+    Convert parameter values to dictionary, run tracking, and update metrics file.
 
     Parameters:
     trial_number (int): Trial number.
@@ -78,7 +94,7 @@ def trial_objective(trial_number, param_values, worker_id=None):
     worker_id (int): Worker ID (optional).
 
     Returns:
-    tuple: (F1 score, elapsed time)
+    float: Elapsed execution time in seconds
     """
     global _trial_counter
 
@@ -99,14 +115,14 @@ def trial_objective(trial_number, param_values, worker_id=None):
         json.dump(params, f, indent=2)
 
     # Run tracking with parameters
-    f1_score, elapsed = run_tracking_with_params(
+    elapsed = run_tracking_with_params(
         trial_number, worker_id, params_path, metrics_path
     )
 
     # Append missing columns to metrics file
     update_worker_metrics(worker_id, trial_number, elapsed, metrics_path)
 
-    return f1_score, elapsed
+    return elapsed
 
 
 def main():
@@ -116,6 +132,9 @@ def main():
     2. Local multiprocessing
     3. Single worker
     """
+    # Clean up any leftover worker files from previous runs
+    cleanup_worker_files()
+
     # Parse arguments
     parser = argparse.ArgumentParser(description="Grid Search.")
     parser.add_argument(
@@ -131,8 +150,6 @@ def main():
     )
     args = parser.parse_args()
 
-    # Parse command line arguments
-
     # Handle LSF/Slurm job array execution
     if args.cluster:
         # Get cluster job ID and total jobs
@@ -146,6 +163,8 @@ def main():
             logger.info(f"Running as Slurm job {job_id}/{n_jobs}")
         else:
             raise RuntimeError("No cluster environment variables found")
+
+        logger.info(f"Grid Search with {n_jobs} Jobs")
 
         # Calculate chunk for this job
         trials_per_job = (NUM_GRID_POINTS + n_jobs - 1) // n_jobs
@@ -178,14 +197,14 @@ def main():
 
             # Merge metrics into final CSV
             merge_worker_metrics(METRICS_FIELDS, "metrics_all.csv")
-            logger.info(f"All metrics merged to metrics_all.csv")
+            logger.info("All metrics merged to metrics_all.csv")
             logger.info(f"Total jobs completed: {n_jobs}")
             logger.info(f"Total trials processed: {NUM_GRID_POINTS}")
 
     else:
         # Regular local execution
         if args.workers > 1:
-            logger.info(f"Starting grid search with {args.workers} workers")
+            logger.info(f"Grid Search with {args.workers} Workers")
 
             # Divide grid points among workers
             grid_chunks = [GRID[i :: args.workers] for i in range(args.workers)]
@@ -227,7 +246,7 @@ def main():
 
         else:
             # Single worker mode
-            logger.info("Starting grid search with single worker")
+            logger.info("Grid Search with Single Worker")
             worker_id = 0
 
             # Process all parameter combinations
@@ -256,11 +275,14 @@ def main():
         json.dump(best_results, f, indent=2)
 
     logger.info("Grid search completed successfully!")
-    logger.info(f"Best results saved to best_results.json")
+    logger.info("Best results saved to best_results.json")
     logger.info(f"🏆 Best F1 Score: {best_results['metrics']['f1']:.4f}")
     logger.info("Best Parameters:")
     for param_name, value in best_results["parameters"].items():
         logger.info(f"  {param_name}: {value}")
+
+    # Clean up worker files after successful completion
+    cleanup_worker_files()
 
 
 if __name__ == "__main__":
