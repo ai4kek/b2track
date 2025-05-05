@@ -74,36 +74,53 @@ stream_handler.setFormatter(formatter)
 logger.addHandler(file_handler)
 logger.addHandler(stream_handler)
 
-# Initialize global variables for worker tracking
-_worker_id = 0
-_trial_counter = 0
-
 # Generate the grid of all parameter combinations
 GRID = list(itertools.product(*[PARAM_SPACE[k] for k in PARAM_SPACE.keys()]))
 NUM_GRID_POINTS = len(GRID)
 
 
 # Objective Function
-def trial_objective(trial_number, param_values, worker_id=None):
+def process_chunk(worker_id, chunk):
+    """
+    Process a chunk of parameter sets with the given worker ID.
+    Each worker processes its own chunk independently.
+
+    Parameters:
+    worker_id (int): The worker ID for this process
+    chunk (list): List of parameter sets to process
+
+    Returns:
+    int: Number of trials processed
+    """
+    # Initialize worker environment and logging
+    init_worker(worker_id, logger)
+
+    trials_processed = 0
+    for i, param_set in enumerate(chunk, 1):
+        # Calculate global trial number if needed
+        trial_num = i
+        logger.info(f"Worker {worker_id} processing trial {trial_num}/{len(chunk)}")
+
+        # Process this parameter set
+        trial_objective(trial_num, param_set, worker_id)
+        trials_processed += 1
+
+    logger.info(f"Worker {worker_id} completed {trials_processed} trials")
+    return trials_processed
+
+
+def trial_objective(trial_number, param_values, worker_id):
     """
     Convert parameter values to dictionary, run tracking, and update metrics file.
 
     Parameters:
     trial_number (int): Trial number.
     param_values (tuple): Tuple of parameter values.
-    worker_id (int): Worker ID (optional).
+    worker_id (int): Worker ID.
 
     Returns:
     float: Elapsed execution time in seconds
     """
-    global _trial_counter
-
-    # If worker_id is None, use the global worker ID
-    if worker_id is None:
-        worker_id = _worker_id
-        _trial_counter += 1
-        trial_number = _trial_counter
-
     # Convert tuple of parameter values to dictionary
     params = dict(zip(PARAM_SPACE.keys(), param_values))
 
@@ -172,6 +189,9 @@ def main():
         end_trial = min(start_trial + trials_per_job, NUM_GRID_POINTS)
         grid_subset = GRID[start_trial:end_trial]
 
+        # Initialize worker environment
+        init_worker(job_id, logger)
+
         # Skip if no trials to process
         if not grid_subset:
             logger.info(f"Job {job_id} has no trials to process (grid exhausted)")
@@ -203,38 +223,32 @@ def main():
 
     else:
         # Regular local execution
-        if args.workers > 1:
+        if (
+            args.workers >= 1
+        ):  # Changed from > 1 to >= 1 to handle --workers 1 the same way
             logger.info(f"Grid Search with {args.workers} Workers")
 
             # Divide grid points among workers
             grid_chunks = [GRID[i :: args.workers] for i in range(args.workers)]
 
-            # Create worker IDs list
-            worker_ids = list(range(args.workers))
+            # Prepare arguments for each worker: (worker_id, chunk)
+            worker_args = [
+                (worker_id, chunk) for worker_id, chunk in enumerate(grid_chunks)
+            ]
 
-            # Create pool and run grid search
-            with Pool(
-                processes=args.workers,
-                initializer=init_worker,
-                initargs=(worker_ids, logger),
-            ) as pool:
-                tasks = []
-                total_trials = 0
+            logger.info(
+                f"Distributing {len(GRID)} trials across {args.workers} workers"
+            )
+            for worker_id, chunk in worker_args:
+                logger.info(f"Worker {worker_id} assigned {len(chunk)} trials")
 
-                # Submit all tasks to the pool
-                for worker_id, chunk in enumerate(grid_chunks):
-                    for i, param_set in enumerate(chunk, 1):
-                        trial_num = (i - 1) * args.workers + worker_id + 1
-                        tasks.append(
-                            pool.apply_async(
-                                trial_objective, (trial_num, param_set, worker_id)
-                            )
-                        )
-                        total_trials += 1
+            # Create pool and run grid search - each worker processes its entire chunk
+            with Pool(processes=args.workers) as pool:
+                # Use starmap to assign each chunk to a worker
+                results = pool.starmap(process_chunk, worker_args)
 
-                # Wait for all tasks to complete (we don't need the return values)
-                for task in tasks:
-                    task.get()
+                # Sum up total trials processed
+                total_trials = sum(results)
 
                 logger.info(
                     f"Completed {total_trials} trials across {args.workers} workers"
@@ -245,9 +259,12 @@ def main():
             logger.info("All metrics merged to metrics_all.csv")
 
         else:
-            # Single worker mode
+            # Single worker mode (only when --workers is not specified)
             logger.info("Grid Search with Single Worker")
             worker_id = 0
+
+            # Initialize worker environment
+            init_worker(worker_id, logger)
 
             # Process all parameter combinations
             for trial_num, param_set in enumerate(GRID, 1):

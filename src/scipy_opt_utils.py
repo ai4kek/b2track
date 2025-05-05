@@ -8,7 +8,6 @@ import csv
 import hashlib
 import json
 import logging
-import multiprocessing
 import os
 import subprocess
 import sys
@@ -76,20 +75,16 @@ RANDOM_SEED = 42
 
 
 # Helper functions
-def init_worker(worker_ids, logger=None):
-    """Initialize worker-specific environment variables and counter.
-    Each process gets a worker ID based on its process ID.
+def init_worker(worker_id, logger=None):
+    """Initialize worker-specific environment and logging.
+
+    Args:
+        worker_id (int): The worker ID for this process
+        logger (Logger, optional): Logger instance to use for logging
     """
-    global _worker_id, _trial_counter
-    process_idx = multiprocessing.current_process()._identity[0] - 1
-    if process_idx < 0:  # Main process
-        _worker_id = 0
-    else:
-        _worker_id = worker_ids[process_idx % len(worker_ids)]
-    _trial_counter = 0
-    os.environ["WORKER_ID"] = str(_worker_id)
+    os.environ["WORKER_ID"] = str(worker_id)
     if logger:
-        logger.info(f"Worker {_worker_id} initialized (PID: {os.getpid()})")
+        logger.info(f"Worker {worker_id} initialized (PID: {os.getpid()})")
 
 
 def compute_param_hash(params):
