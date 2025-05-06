@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#BSUB -J grid[1-8]                    # Job array with 8 workers
+#BSUB -J "grid[0-9]"                  # Job array with 8 workers
 #BSUB -P aakram                       # Account name (project ID)
 #BSUB -G b2_belle2                    # Group for accounting purposes
 #BSUB -n 1                            # Number of cores per job
@@ -20,5 +20,13 @@ echo "Running grid search job $LSB_JOBID on $(hostname)"
 echo "Running job array index: $LSB_JOBINDEX of $LSB_JOBINDEX_END"
 
 echo "Job started on $(date)"
+
+# main grid search command
 python3 run_scipy_grid.py --cluster
+
+# test job array limitations with a 2-minute sleep
+# echo "Worker ${LSB_JOBINDEX}: Sleeping for 2 minutes..."
+# sleep 120  # 2 minutes
+# echo "Worker ${LSB_JOBINDEX}: Woke up"
+
 echo "Job finished on $(date)"

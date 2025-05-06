@@ -201,8 +201,8 @@ def main():
         worker_logger = get_worker_logger(job_id)
 
         # Log cluster job information
-        main_logger.info(f"Grid Search with {n_jobs} {cluster_type} Jobs")
-        main_logger.info(f"Starting worker {job_id} for distributed processing")
+        main_logger.info(f"Grid Search on {cluster_type} with {n_jobs} Jobs")
+        main_logger.info(f"Worker {job_id} started for distributed processing")
         worker_logger.info(f"Worker {job_id} is one of {n_jobs} total workers")
 
         # Calculate chunk size and get this worker's chunk
@@ -247,9 +247,7 @@ def main():
             )
 
         # Worker completion message
-        worker_logger.info(
-            f"Worker {job_id} completed - results preserved for post-processing"
-        )
+        worker_logger.info(f"Worker {job_id} results preserved for post-processing")
         main_logger.info(f"Worker {job_id} completed processing")
 
     else:
@@ -334,7 +332,7 @@ def main():
     # Merge metrics and extract best results
     try:
         # Attempt to merge all worker metrics files
-        main_logger.info("\nMerging worker metrics files...")
+        main_logger.info("Merging worker metrics files...")
         merge_success = merge_worker_metrics(METRICS_FIELDS, "metrics_all.csv")
 
         if merge_success:

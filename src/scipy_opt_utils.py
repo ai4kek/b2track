@@ -16,12 +16,7 @@ from pathlib import Path
 
 # Configure logging directory
 log_dir = Path("logs")
-# Ensure logs directory exists
-try:
-    log_dir.mkdir(exist_ok=True, mode=0o755)
-except Exception as e:
-    print(f"Warning: Could not create logs directory: {e}")
-    # Try to continue anyway
+log_dir.mkdir(exist_ok=True)
 
 # Standard formatter for all loggers
 FORMATTER = logging.Formatter(
