@@ -172,8 +172,10 @@ def update_worker_metrics(worker_id, trial_number, elapsed, metrics_path):
     Update the most recent (last) row in the metrics CSV with execution_time, worker_id, and trial_number.
     If the file doesn't exist, log a warning and return.
     """
+    metrics_path = Path(metrics_path)
+
     # Check if metrics file exists
-    if not Path(metrics_path).exists():
+    if not metrics_path.exists():
         logger.warning(
             f"Worker {worker_id}, Trial {trial_number}: Metrics file {metrics_path} does not exist. "
             f"Cannot update with execution time {elapsed:.2f}s"
@@ -199,11 +201,17 @@ def update_worker_metrics(worker_id, trial_number, elapsed, metrics_path):
         last_row["worker_id"] = worker_id
         last_row["trial_number"] = trial_number
 
-        # Write back all rows
-        with open(metrics_path, "w", newline="") as f:
+        # Create a temporary file in the same directory
+        temp_path = metrics_path.with_suffix(".tmp")
+
+        # Write to the temporary file
+        with open(temp_path, "w", newline="") as f:
             writer = csv.DictWriter(f, fieldnames=fieldnames)
             writer.writeheader()
             writer.writerows(reader)
+
+        # Rename the temporary file to the original file (atomic operation on most systems)
+        temp_path.replace(metrics_path)
 
         logger.info(
             f"Worker {worker_id}, Trial {trial_number}: Updated metrics with execution time {elapsed:.2f}s"
