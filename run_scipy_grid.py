@@ -28,7 +28,6 @@ import argparse
 import itertools
 import json
 import os
-import sys
 from multiprocessing import Pool
 
 from src.scipy_opt_utils import (
@@ -57,19 +56,20 @@ NUM_GRID_POINTS = len(GRID)
 # Objective Function
 def process_chunk(worker_id, chunk):
     """
-    Process a chunk of parameter sets with the given worker ID.
-    Each worker processes its own chunk independently.
+    Process a chunk of parameter combinations.
 
     Parameters:
-    worker_id (int): The worker ID for this process
-    chunk (list): List of parameter sets to process
+    worker_id (int): Worker ID.
+    chunk (list): List of parameter combinations to process.
 
     Returns:
-    int: Number of trials processed
+    int: Number of trials processed.
     """
-    # Initialize worker environment and get worker-specific logger
-    worker_logger = init_worker(worker_id)
-    worker_logger.info(f"Worker {worker_id} starting to process {len(chunk)} trials")
+    # Initialize worker environment
+    init_worker(worker_id)
+
+    # Get worker-specific logger
+    worker_logger = get_worker_logger(worker_id)
 
     trials_processed = 0
     for i, param_set in enumerate(chunk, 1):
@@ -79,9 +79,27 @@ def process_chunk(worker_id, chunk):
             f"Worker {worker_id} processing trial {trial_num}/{len(chunk)}"
         )
 
-        # Process this parameter set
-        trial_objective(trial_num, param_set, worker_id)
-        trials_processed += 1
+        try:
+            # Process this parameter set
+            elapsed = trial_objective(trial_num, param_set, worker_id)
+
+            # Check if the trial was successful (elapsed > 0)
+            if elapsed > 0:
+                trials_processed += 1
+                worker_logger.info(
+                    f"Worker {worker_id} completed trial {trial_num} successfully"
+                )
+            else:
+                worker_logger.warning(
+                    f"Worker {worker_id} trial {trial_num} returned zero elapsed time, possible failure"
+                )
+
+        except Exception as e:
+            worker_logger.error(
+                f"Worker {worker_id} trial {trial_num} failed with error: {e}"
+            )
+            # Continue with the next trial even if this one failed
+            continue
 
     worker_logger.info(f"Worker {worker_id} completed {trials_processed} trials")
     return trials_processed
@@ -99,6 +117,8 @@ def trial_objective(trial_number, param_values, worker_id):
     Returns:
     float: Elapsed execution time in seconds
     """
+    worker_logger = get_worker_logger(worker_id)
+
     # Convert tuple of parameter values to dictionary
     params = dict(zip(PARAM_SPACE.keys(), param_values))
 
@@ -114,32 +134,42 @@ def trial_objective(trial_number, param_values, worker_id):
         trial_number, worker_id, params_path, metrics_path
     )
 
-    # Append missing columns to metrics file
-    update_worker_metrics(worker_id, trial_number, elapsed, metrics_path)
+    # Check if metrics file exists before trying to update it
+    if metrics_path.exists():
+        try:
+            # Append missing columns to metrics file
+            update_worker_metrics(worker_id, trial_number, elapsed, metrics_path)
+            worker_logger.info(
+                f"Worker {worker_id} updated trial {trial_number} metrics file successfully"
+            )
+        except Exception as e:
+            worker_logger.error(
+                f"Worker {worker_id} failed to update trial {trial_number} metrics file: {e}"
+            )
+    else:
+        worker_logger.error(
+            f"Worker {worker_id} metrics file {metrics_path} for trial {trial_number} does not exist."
+            f"Cannot update with execution time {elapsed:.2f}s"
+        )
 
     return elapsed
 
 
 def main():
     """Main function to run grid search in various modes.
+
     Supports:
     1. Cluster mode (LSF or Slurm)
     2. Local multiprocessing
-    3. Single worker
+    3. Local single worker
     """
-    # Clean up any leftover worker files and output files from previous runs
-    # to ensure we start from a clean state
-    main_logger.info("Cleaning up worker files from previous runs")
-    cleanup_worker_files(clean_output_files=True)
-    main_logger.info("Starting with a clean state")
 
     # Parse arguments
     parser = argparse.ArgumentParser(description="Grid Search.")
     parser.add_argument(
         "--workers",
         type=int,
-        default=1,
-        help="Number of parallel workers",
+        help="Number of parallel workers.",
     )
     parser.add_argument(
         "--cluster",
@@ -148,156 +178,201 @@ def main():
     )
     args = parser.parse_args()
 
-    # Handle LSF/Slurm job array execution
+    # Clean up worker-specific files (*_xxx.json, *_xxx.csv) as well as
+    # metrics_all.csv and best_results.json. We start from a clean state.
+    cleanup_worker_files(clean_output_files=True)
+
+    # ==== Cluster Mode ====
     if args.cluster:
+
         # Get cluster job ID and total jobs
         if "LSB_JOBINDEX" in os.environ:  # LSF
             job_id = int(os.environ["LSB_JOBINDEX"])
             n_jobs = int(os.environ["LSB_JOBINDEX_END"])
-            # Initialize worker environment and get worker-specific logger
-            worker_logger = init_worker(job_id)
-            main_logger.info(f"Initialized worker {job_id} for LSF job")
-            worker_logger.info(f"Running as LSF job {job_id}/{n_jobs}")
+            cluster_type = "LSF"
         elif "SLURM_ARRAY_TASK_ID" in os.environ:  # Slurm
             job_id = int(os.environ["SLURM_ARRAY_TASK_ID"])
             n_jobs = int(os.environ["SLURM_ARRAY_TASK_COUNT"])
-            # Initialize worker environment and get worker-specific logger
-            worker_logger = init_worker(job_id)
-            main_logger.info(f"Initialized worker {job_id} for Slurm job")
-            worker_logger.info(f"Running as Slurm job {job_id}/{n_jobs}")
+            cluster_type = "Slurm"
         else:
             raise RuntimeError("No cluster environment variables found")
 
-        main_logger.info(f"Grid Search with {n_jobs} Jobs")
-        worker_logger.info(f"Grid Search with {n_jobs} Jobs")
+        # Get worker logger for status updates
+        worker_logger = get_worker_logger(job_id)
 
-        # Calculate chunk for this job
-        trials_per_job = (NUM_GRID_POINTS + n_jobs - 1) // n_jobs
-        start_trial = (job_id - 1) * trials_per_job
-        end_trial = min(start_trial + trials_per_job, NUM_GRID_POINTS)
-        grid_subset = GRID[start_trial:end_trial]
+        # Log cluster job information
+        main_logger.info(f"Grid Search with {n_jobs} {cluster_type} Jobs")
+        main_logger.info(f"Starting worker {job_id} for distributed processing")
+        worker_logger.info(f"Worker {job_id} is one of {n_jobs} total workers")
 
-        # Skip if no trials to process
-        if not grid_subset:
+        # Calculate chunk size and get this worker's chunk
+        chunk_size = (NUM_GRID_POINTS + n_jobs - 1) // n_jobs
+        start_idx = (job_id - 1) * chunk_size
+        end_idx = min(job_id * chunk_size, NUM_GRID_POINTS)
+
+        # Process only the trials assigned to this worker
+        if start_idx < NUM_GRID_POINTS:
             worker_logger.info(
-                f"Job {job_id} has no trials to process (grid exhausted)"
+                f"Worker {job_id} processing trials {start_idx+1} to {end_idx} ({end_idx-start_idx} trials)"
             )
-            main_logger.info(f"Job {job_id} has no trials to process (grid exhausted)")
-            sys.exit(0)
+            job_chunk = GRID[start_idx:end_idx]
 
-        worker_logger.info(
-            f"Job {job_id} processing trials {start_trial+1} to {end_trial}"
-        )
-
-        # Process this job's parameter combinations
-        for trial_num, param_set in enumerate(grid_subset, start_trial + 1):
-            worker_logger.info(f"Processing trial {trial_num}/{NUM_GRID_POINTS}")
-            trial_objective(trial_num, param_set, job_id)
-
-        worker_logger.info(
-            f"Job {job_id} complete - processed {len(grid_subset)} trials"
-        )
-        main_logger.info(f"Job {job_id} complete - processed {len(grid_subset)} trials")
-
-        # In cluster mode, each job just processes its own chunk
-        # Merging and extracting best results will be done separately
-        # by a post-processing step or manually after all jobs complete
-        worker_logger.info(f"Job {job_id} completed successfully")
-        main_logger.info(f"Job {job_id} completed successfully")
-
-    else:
-        # Regular local execution
-        if (
-            args.workers >= 1
-        ):  # Changed from > 1 to >= 1 to handle --workers 1 the same way
-            main_logger.info(f"Grid Search with {args.workers} Workers")
-
-            # Divide grid points among workers
-            grid_chunks = [GRID[i :: args.workers] for i in range(args.workers)]
-
-            # Prepare arguments for each worker: (worker_id, chunk)
-            worker_args = [
-                (worker_id, chunk) for worker_id, chunk in enumerate(grid_chunks)
-            ]
-
-            main_logger.info(
-                f"Distributing {len(GRID)} trials across {args.workers} workers"
-            )
-            for worker_id, chunk in worker_args:
-                main_logger.info(f"Worker {worker_id} assigned {len(chunk)} trials")
-
-            # Create pool and run grid search - each worker processes its entire chunk
-            with Pool(processes=args.workers) as pool:
-                # Use starmap to assign each chunk to a worker
-                results = pool.starmap(process_chunk, worker_args)
-
-                # Sum up total trials processed
-                total_trials = sum(results)
-
-                main_logger.info(
-                    f"Completed {total_trials} trials across {args.workers} workers"
+            try:
+                # Process the chunk
+                trials_processed = process_chunk(job_id, job_chunk)
+                worker_logger.info(
+                    f"Worker {job_id} completed {trials_processed} out of {len(job_chunk)} assigned trials"
                 )
 
-            # Merge worker metrics files
-            merge_worker_metrics(METRICS_FIELDS, "metrics_all.csv")
-            main_logger.info("All metrics merged to metrics_all.csv")
+                # Check if all trials were processed successfully
+                if trials_processed < len(job_chunk):
+                    failed_trials = len(job_chunk) - trials_processed
+                    worker_logger.warning(
+                        f"Worker {job_id} failed to process {failed_trials} trials"
+                    )
+                    main_logger.warning(
+                        f"Worker {job_id} failed to process {failed_trials} trials"
+                    )
 
+            except Exception as e:
+                worker_logger.error(f"Worker {job_id} failed with error: {e}")
+                main_logger.error(f"Worker {job_id} failed with error: {e}")
+                # Even if the worker fails, try to merge available results
+                worker_logger.info(
+                    "Attempting to merge available results despite worker failure"
+                )
+        else:
+            worker_logger.warning(
+                f"Worker {job_id} has no trials to process (start_idx={start_idx} >= n_grid_points={NUM_GRID_POINTS})"
+            )
+
+        # Worker completion message
+        worker_logger.info(
+            f"Worker {job_id} completed - results preserved for post-processing"
+        )
+        main_logger.info(f"Worker {job_id} completed processing")
+
+    else:
+        # ==== Multi-Worker Mode ====
+        if args.workers is not None and args.workers > 1:
+
+            main_logger.info(f"Grid Search with {args.workers} Local Workers")
+            main_logger.info(
+                f"Starting {args.workers} workers for distributed processing"
+            )
+            main_logger.info(f"Distributing {NUM_GRID_POINTS} trials across workers")
+
+            # Calculate chunk size for each worker
+            chunk_size = (NUM_GRID_POINTS + args.workers - 1) // args.workers
+
+            # Create chunks with zero-based worker IDs
+            worker_args = []
+            for worker_id in range(args.workers):  # 0 to workers-1
+                start_idx = worker_id * chunk_size
+                end_idx = min((worker_id + 1) * chunk_size, NUM_GRID_POINTS)
+                if start_idx < NUM_GRID_POINTS:
+                    worker_args.append((worker_id, GRID[start_idx:end_idx]))
+                    main_logger.info(
+                        f"Worker {worker_id} assigned trials {start_idx+1} to {end_idx} ({end_idx-start_idx} trials)"
+                    )
+
+            # Create pool and run grid search - each worker processes its entire chunk
+            try:
+                with Pool(processes=args.workers) as pool:
+                    # Use starmap to assign each chunk to a worker
+                    # Handle worker failures by setting timeout
+                    results = pool.starmap(process_chunk, worker_args)
+
+                    # Check results from all workers
+                    total_trials_processed = sum(results)
+                    main_logger.info(
+                        f"All workers completed. Total trials processed: {total_trials_processed}/{NUM_GRID_POINTS}"
+                    )
+
+                    # Check if any trials failed
+                    if total_trials_processed < NUM_GRID_POINTS:
+                        failed_trials = NUM_GRID_POINTS - total_trials_processed
+                        main_logger.warning(
+                            f"Failed to process {failed_trials} trials across all workers"
+                        )
+                        main_logger.warning(
+                            f"Failed to process {failed_trials} trials across all workers"
+                        )
+
+            except Exception as e:
+                main_logger.error(f"Distributed processing failed with error: {e}")
+                main_logger.error(f"Distributed processing failed with error: {e}")
+                # Even if some workers fail, try to merge available results
+                main_logger.info(
+                    "Attempting to merge available results from successful workers"
+                )
+
+            finally:
+                # Don't merge here - we'll do it at the end for all modes
+                main_logger.info(
+                    "Multi-worker processing completed - worker files preserved for merging at the end"
+                )
+
+        # ==== Single Worker Mode ====
         else:
             # Single worker mode (only when --workers is not specified)
             main_logger.info("Grid Search with Single Worker")
+            main_logger.info("Starting 1 worker for sequential processing")
+            main_logger.info(f"Processing {NUM_GRID_POINTS} trials sequentially")
+
+            # Process all trials using process_chunk
             worker_id = 0
+            trials_processed = process_chunk(worker_id, GRID)
 
-            # Initialize worker environment and get worker-specific logger
-            worker_logger = init_worker(worker_id)
+            # Log completion status
+            if trials_processed < NUM_GRID_POINTS:
+                failed_trials = NUM_GRID_POINTS - trials_processed
+                main_logger.warning(f"Failed to process {failed_trials} trials")
+            else:
+                main_logger.info(f"Completed {NUM_GRID_POINTS} trials sequentially")
 
-            # Process all parameter combinations
-            for trial_num, param_set in enumerate(GRID, 1):
-                worker_logger.info(f"Processing trial {trial_num}/{NUM_GRID_POINTS}")
-                trial_objective(trial_num, param_set, worker_id)
+    # Merge metrics and extract best results
+    try:
+        # Attempt to merge all worker metrics files
+        main_logger.info("\nMerging worker metrics files...")
+        merge_success = merge_worker_metrics(METRICS_FIELDS, "metrics_all.csv")
 
-            worker_logger.info(f"Completed {NUM_GRID_POINTS} trials")
-            main_logger.info(f"Completed {NUM_GRID_POINTS} trials")
+        if merge_success:
+            main_logger.info("All metrics merged to metrics_all.csv")
 
-            # Merge worker metrics file to metrics_all.csv (for consistency with other modes)
-            main_logger.info("Merging worker metrics to metrics_all.csv...")
-            merge_worker_metrics(METRICS_FIELDS, "metrics_all.csv")
-            main_logger.info("Metrics merged to metrics_all.csv")
+            # Extract best results for all modes
+            main_logger.info("Extracting best results from metrics_all.csv...")
+            best_results = extract_best_results("metrics_all.csv")
 
-    # For all modes, extract and display best results
-    # For cluster mode, this will be done by a post-processing step or manually
-    # after all jobs complete
-    if not args.cluster:
-        main_logger.info("Merging worker metrics files...")
-        merge_worker_metrics(METRICS_FIELDS, "metrics_all.csv")
-        main_logger.info("All metrics merged to metrics_all.csv")
+            if best_results is None:
+                main_logger.warning("No valid results found in metrics_all.csv")
+                main_logger.warning(
+                    "Check worker-specific metrics files for valid results"
+                )
+            else:
+                # Save best results to JSON
+                with open("best_results.json", "w") as f:
+                    json.dump(best_results, f, indent=2)
 
-        main_logger.info("Extracting best results from metrics_all.csv...")
-        best_results = extract_best_results("metrics_all.csv")
+                main_logger.info("Best results saved to best_results.json")
+                main_logger.info(
+                    f"🏆 Best F1 Score: {best_results['metrics']['f1']:.4f}"
+                )
+                main_logger.info("Best Parameters:")
+                for param_name, value in best_results["parameters"].items():
+                    main_logger.info(f"  {param_name}: {value}")
+        else:
+            main_logger.warning("No worker metrics files found to merge")
+            main_logger.warning("Check if any trials completed successfully")
 
-        if best_results is None:
-            main_logger.error("No valid results found in metrics_all.csv")
-            main_logger.error(
-                "Grid search completed with errors - no best results available"
-            )
-            sys.exit(1)
+    except Exception as e:
+        main_logger.error(f"Error during metrics merging or result extraction: {e}")
+        main_logger.warning(
+            "Worker-specific files are preserved for manual post-processing"
+        )
 
-        # Save best results to JSON
-        with open("best_results.json", "w") as f:
-            json.dump(best_results, f, indent=2)
-
-    if not args.cluster:
-        main_logger.info("Grid search completed successfully!")
-        main_logger.info("Best results saved to best_results.json")
-        main_logger.info(f"🏆 Best F1 Score: {best_results['metrics']['f1']:.4f}")
-        main_logger.info("Best Parameters:")
-        for param_name, value in best_results["parameters"].items():
-            main_logger.info(f"  {param_name}: {value}")
-    else:
-        main_logger.info("Grid search job completed")
-
-    # We don't clean up worker files after completion
-    # This allows inspection of individual worker files for debugging
-    main_logger.info("Grid search completed - worker files preserved for inspection")
+    # Completion message for all modes
+    main_logger.info("Grid search completed")
 
 
 if __name__ == "__main__":

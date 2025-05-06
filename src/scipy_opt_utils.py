@@ -85,9 +85,9 @@ logger = get_worker_logger()
 PARAM_SPACE = {
     "maximalDeltaPhi": [0.2, 0.3],
     "maximalLayerJump": [4, 6],
-    "minimalPtRequirement": [0.0, 0.1],
-    "pathMaximalCandidatesInFlight": [2, 3],
-    "stateMaximalHitCandidates": [3, 4],
+    # "minimalPtRequirement": [0.0, 0.1],
+    # "pathMaximalCandidatesInFlight": [2, 3],
+    # "stateMaximalHitCandidates": [3, 4],
 }
 
 # Metrics fields
@@ -115,24 +115,18 @@ RANDOM_SEED = 42
 
 # Helper functions
 def init_worker(worker_id):
-    """Initialize worker-specific environment and logging.
+    """
+    Initialize worker environment.
 
     Args:
-        worker_id (int): The worker ID for this process
-
-    Returns:
-        Logger: The worker's logger
+        worker_id (int): Worker ID.
     """
-    # Set environment variable for worker ID
+    # Set worker ID in environment variables for potential use by subprocesses
     os.environ["WORKER_ID"] = str(worker_id)
 
-    # Get logger for this worker
+    # Get worker-specific logger and log initialization
     logger = get_worker_logger(worker_id)
-
-    # Log initialization
     logger.info(f"Worker {worker_id} initialized (PID: {os.getpid()})")
-
-    return logger
 
 
 def compute_param_hash(params):
@@ -164,6 +158,7 @@ def cleanup_worker_files(clean_output_files=True):
     # Clean parameter files
     for param_file in Path().glob("params_worker_*.json"):
         param_file.unlink(missing_ok=True)
+
     # Clean metrics files
     for metrics_file in Path().glob("metrics_worker_*.csv"):
         metrics_file.unlink(missing_ok=True)
@@ -174,38 +169,58 @@ def cleanup_worker_files(clean_output_files=True):
         best_results_file = Path("best_results.json")
         if best_results_file.exists():
             best_results_file.unlink()
-            logger.info("Removed existing best_results.json")
 
         # Clean merged metrics file
         metrics_all_file = Path("metrics_all.csv")
         if metrics_all_file.exists():
             metrics_all_file.unlink()
-            logger.info("Removed existing metrics_all.csv")
 
 
 def update_worker_metrics(worker_id, trial_number, elapsed, metrics_path):
     """
     Update the most recent (last) row in the metrics CSV with execution_time, worker_id, and trial_number.
+    If the file doesn't exist, log a warning and return.
     """
-    # Read all rows
-    with open(metrics_path, "r", newline="") as f:
-        reader = list(csv.DictReader(f))
-        fieldnames = reader[0].keys() if reader else []
+    # Check if metrics file exists
+    if not Path(metrics_path).exists():
+        logger.warning(
+            f"Worker {worker_id}, Trial {trial_number}: Metrics file {metrics_path} does not exist. "
+            f"Cannot update with execution time {elapsed:.2f}s"
+        )
+        return
 
-    if not reader:
-        raise RuntimeError("Metrics CSV is empty, cannot update last row.")
+    try:
+        # Read all rows
+        with open(metrics_path, "r", newline="") as f:
+            reader = list(csv.DictReader(f))
+            fieldnames = reader[0].keys() if reader else []
 
-    # Update the last row
-    last_row = reader[-1]
-    last_row["execution_time"] = f"{elapsed:.2f}"  # Format with 2 decimal places
-    last_row["worker_id"] = worker_id
-    last_row["trial_number"] = trial_number
+        if not reader:
+            logger.warning(
+                f"Worker {worker_id}, Trial {trial_number}: Metrics file {metrics_path} is empty. "
+                f"Cannot update with execution time {elapsed:.2f}s"
+            )
+            return
 
-    # Write back all rows
-    with open(metrics_path, "w", newline="") as f:
-        writer = csv.DictWriter(f, fieldnames=fieldnames)
-        writer.writeheader()
-        writer.writerows(reader)
+        # Update the last row
+        last_row = reader[-1]
+        last_row["execution_time"] = f"{elapsed:.2f}"  # Format with 2 decimal places
+        last_row["worker_id"] = worker_id
+        last_row["trial_number"] = trial_number
+
+        # Write back all rows
+        with open(metrics_path, "w", newline="") as f:
+            writer = csv.DictWriter(f, fieldnames=fieldnames)
+            writer.writeheader()
+            writer.writerows(reader)
+
+        logger.info(
+            f"Worker {worker_id}, Trial {trial_number}: Updated metrics with execution time {elapsed:.2f}s"
+        )
+    except Exception as e:
+        logger.error(
+            f"Worker {worker_id}, Trial {trial_number}: Error updating metrics file {metrics_path}: {e}"
+        )
 
 
 def merge_worker_metrics(metrics_fields, output_file="metrics_all.csv"):
@@ -232,6 +247,7 @@ def merge_worker_metrics(metrics_fields, output_file="metrics_all.csv"):
         try:
             with worker_file.open() as f:
                 reader = csv.DictReader(f)
+
                 # Verify the file has the expected structure
                 if not set(metrics_fields).issubset(set(reader.fieldnames or [])):
                     logger.warning(f"Skipping {worker_file}: missing required columns")
@@ -286,6 +302,7 @@ def extract_best_results(metrics_file="metrics_all.csv"):
     try:
         with metrics_path.open("r", newline="") as f:
             reader = csv.DictReader(f)
+
             # Check if the file has the required columns
             if not reader.fieldnames or "f1" not in reader.fieldnames:
                 logger.warning(
@@ -435,10 +452,45 @@ def run_tracking_with_params(
                 time.sleep(5)  # Wait before retry
                 continue
 
-    # If all attempts failed, return 0.0 as the elapsed time
+    # If all attempts failed, create a minimal metrics file with failure information
+    # This ensures update_worker_metrics will have something to update
     logger.error(
         f"Worker {worker_id}, Trial {trial_number}: All {max_retries} attempts failed"
     )
+
+    # Check if metrics file exists, if not create a minimal one
+    if not Path(metrics_path).exists():
+        try:
+            # Load parameters from the params file
+            with open(params_path, "r") as f:
+                params = json.load(f)
+
+            # Create a minimal metrics file with the parameters and default metrics
+            with open(metrics_path, "w", newline="") as f:
+                writer = csv.DictWriter(f, fieldnames=METRICS_FIELDS)
+                writer.writeheader()
+
+                # Create a row with parameters and default metrics
+                row = {
+                    **params,  # Parameters from JSON
+                    "efficiency": "0.0000",  # Default efficiency
+                    "purity": "0.0000",  # Default purity
+                    "f1": "0.0000",  # Default F1 score
+                    "finalstate": "failed",  # Mark as failed
+                    "execution_time": "",  # Will be updated by update_worker_metrics
+                    "worker_id": "",  # Will be updated by update_worker_metrics
+                    "trial_number": "",  # Will be updated by update_worker_metrics
+                }
+                writer.writerow(row)
+
+            logger.info(
+                f"Worker {worker_id}, Trial {trial_number}: Created minimal metrics file after failure"
+            )
+        except Exception as e:
+            logger.error(
+                f"Worker {worker_id}, Trial {trial_number}: Failed to create minimal metrics file: {e}"
+            )
+
     return 0.0
 
 
