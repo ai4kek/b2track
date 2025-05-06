@@ -130,45 +130,41 @@ def compute_param_hash(params):
     return hashlib.sha1(param_str.encode()).hexdigest()[:10]
 
 
-def get_worker_params_path(worker_id):
-    """Get the worker-specific parameters file path."""
-    if worker_id is None:
-        raise ValueError("Worker ID must be provided")
-    return Path(f"params_worker_{worker_id:03d}.json")
-
-
-def get_worker_metrics_path(worker_id):
-    """Get the worker-specific metrics file path."""
-    if worker_id is None:
-        raise ValueError("Worker ID must be provided")
-    return Path(f"metrics_worker_{worker_id:03d}.csv")
-
-
-def cleanup_worker_files(clean_output_files=True):
-    """Clean up worker-specific files (params and metrics).
+def get_worker_file_path(worker_id, file_type):
+    """Get a worker-specific file path.
 
     Args:
-        clean_output_files (bool): If True, also clean output files (best_results.json, metrics_all.csv)
+        worker_id (int): Worker ID for file naming
+        file_type (str): Type of file ('params' or 'metrics')
+
+    Returns:
+        Path: Path to the worker file
     """
-    # Clean parameter files
-    for param_file in Path().glob("params_worker_*.json"):
-        param_file.unlink(missing_ok=True)
+    if worker_id is None:
+        raise ValueError("Worker ID must be provided")
 
-    # Clean metrics files
-    for metrics_file in Path().glob("metrics_worker_*.csv"):
-        metrics_file.unlink(missing_ok=True)
+    # Map file types to extensions
+    extensions = {"params": ".json", "metrics": ".csv"}
+    if file_type not in extensions:
+        raise ValueError(f"Unknown file type: {file_type}")
 
-    # Clean output files if requested
-    if clean_output_files:
-        # Clean best results file
-        best_results_file = Path("best_results.json")
-        if best_results_file.exists():
-            best_results_file.unlink()
+    return Path(f"{file_type}_worker_{worker_id:03d}{extensions[file_type]}")
 
-        # Clean merged metrics file
-        metrics_all_file = Path("metrics_all.csv")
-        if metrics_all_file.exists():
-            metrics_all_file.unlink()
+
+def cleanup_worker_files(worker_id):
+    """Clean up files for a specific worker.
+
+    Args:
+        worker_id (int): Worker ID for file cleanup.
+    """
+    if worker_id is None:
+        raise ValueError("Worker ID must be provided")
+
+    # Clean this worker's files
+    for file_type in ["params", "metrics"]:
+        worker_file = get_worker_file_path(worker_id, file_type)
+        if worker_file.exists():
+            worker_file.unlink(missing_ok=True)
 
 
 def update_worker_metrics(worker_id, trial_number, elapsed, metrics_path):

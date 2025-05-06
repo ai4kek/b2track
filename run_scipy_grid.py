@@ -29,15 +29,15 @@ import itertools
 import json
 import os
 from multiprocessing import Pool
+from pathlib import Path
 
 from src.scipy_opt_utils import (
     METRICS_FIELDS,
     PARAM_SPACE,
     cleanup_worker_files,
     extract_best_results,
+    get_worker_file_path,
     get_worker_logger,
-    get_worker_metrics_path,
-    get_worker_params_path,
     init_worker,
     merge_worker_metrics,
     run_tracking_with_params,
@@ -122,12 +122,20 @@ def trial_objective(trial_number, param_values, worker_id):
     # Convert tuple of parameter values to dictionary
     params = dict(zip(PARAM_SPACE.keys(), param_values))
 
-    metrics_path = get_worker_metrics_path(worker_id)
-    params_path = get_worker_params_path(worker_id)
+    # Clean old worker files
+    cleanup_worker_files(worker_id)
 
-    # Write parameters to JSON
-    with params_path.open("w") as f:
-        json.dump(params, f, indent=2)
+    # Get worker-specific file paths
+    metrics_path = get_worker_file_path(worker_id, "metrics")
+    params_path = get_worker_file_path(worker_id, "params")
+
+    # Write parameters to JSON file
+    try:
+        with params_path.open("w") as f:
+            json.dump(params, f, indent=2)
+    except Exception as e:
+        worker_logger.error(f"Failed to write parameter file {params_path}: {e}")
+        return 0.0  # Return zero to indicate failure
 
     # Run tracking with parameters
     elapsed = run_tracking_with_params(
@@ -178,9 +186,9 @@ def main():
     )
     args = parser.parse_args()
 
-    # Clean up worker-specific files (*_xxx.json, *_xxx.csv) as well as
-    # metrics_all.csv and best_results.json. We start from a clean state.
-    cleanup_worker_files(clean_output_files=True)
+    # Clean shared output files
+    Path("metrics_all.csv").unlink(missing_ok=True)
+    Path("best_results.json").unlink(missing_ok=True)
 
     # ==== Cluster Mode ====
     if args.cluster:
@@ -263,11 +271,12 @@ def main():
             # Calculate chunk size for each worker
             chunk_size = (NUM_GRID_POINTS + args.workers - 1) // args.workers
 
-            # Create chunks with zero-based worker IDs
+            # Create chunks with 1-based worker IDs
             worker_args = []
-            for worker_id in range(args.workers):  # 0 to workers-1
-                start_idx = worker_id * chunk_size
-                end_idx = min((worker_id + 1) * chunk_size, NUM_GRID_POINTS)
+            for i in range(args.workers):
+                worker_id = i + 1  # 1-based worker IDs
+                start_idx = i * chunk_size
+                end_idx = min((i + 1) * chunk_size, NUM_GRID_POINTS)
                 if start_idx < NUM_GRID_POINTS:
                     worker_args.append((worker_id, GRID[start_idx:end_idx]))
                     main_logger.info(
@@ -318,8 +327,8 @@ def main():
             main_logger.info("Starting 1 worker for sequential processing")
             main_logger.info(f"Processing {NUM_GRID_POINTS} trials sequentially")
 
-            # Process all trials using process_chunk
-            worker_id = 0
+            # Process all trials using process_chunk (use worker_id=1)
+            worker_id = 1
             trials_processed = process_chunk(worker_id, GRID)
 
             # Log completion status
