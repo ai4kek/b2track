@@ -122,9 +122,6 @@ def trial_objective(trial_number, param_values, worker_id):
     # Convert tuple of parameter values to dictionary
     params = dict(zip(PARAM_SPACE.keys(), param_values))
 
-    # Clean old worker files
-    cleanup_worker_files(worker_id)
-
     # Get worker-specific file paths
     metrics_path = get_worker_file_path(worker_id, "metrics")
     params_path = get_worker_file_path(worker_id, "params")
@@ -212,6 +209,9 @@ def main():
         main_logger.info(f"Grid Search on {cluster_type} with {n_jobs} Jobs")
         main_logger.info(f"Worker {job_id} started for distributed processing")
         worker_logger.info(f"Worker {job_id} is one of {n_jobs} total workers")
+
+        # Clean old worker files
+        # cleanup_worker_files(job_id)
 
         # Calculate chunk size and get this worker's chunk
         chunk_size = (NUM_GRID_POINTS + n_jobs - 1) // n_jobs
