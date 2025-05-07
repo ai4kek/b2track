@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#BSUB -J "grid[0-9]"                  # Job array with 8 workers
+#BSUB -J "grid[1-8]"                  # Job array with 8 workers
 #BSUB -P aakram                       # Account name (project ID)
 #BSUB -G b2_belle2                    # Group for accounting purposes
 #BSUB -n 1                            # Number of cores per job
