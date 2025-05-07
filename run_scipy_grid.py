@@ -315,7 +315,6 @@ def main():
                 )
 
             finally:
-                # Don't merge here - we'll do it at the end for all modes
                 main_logger.info(
                     "Multi-worker processing completed - worker files preserved for merging at the end"
                 )
@@ -336,50 +335,15 @@ def main():
                 failed_trials = NUM_GRID_POINTS - trials_processed
                 main_logger.warning(f"Failed to process {failed_trials} trials")
             else:
-                main_logger.info(f"Completed {NUM_GRID_POINTS} trials sequentially")
-
-    # Merge metrics and extract best results
-    try:
-        # Attempt to merge all worker metrics files
-        main_logger.info("Merging worker metrics files...")
-        merge_success = merge_worker_metrics(METRICS_FIELDS, "metrics_all.csv")
-
-        if merge_success:
-            main_logger.info("All metrics merged to metrics_all.csv")
-
-            # Extract best results for all modes
-            main_logger.info("Extracting best results from metrics_all.csv...")
-            best_results = extract_best_results("metrics_all.csv")
-
-            if best_results is None:
-                main_logger.warning("No valid results found in metrics_all.csv")
-                main_logger.warning(
-                    "Check worker-specific metrics files for valid results"
-                )
-            else:
-                # Save best results to JSON
-                with open("best_results.json", "w") as f:
-                    json.dump(best_results, f, indent=2)
-
-                main_logger.info("Best results saved to best_results.json")
                 main_logger.info(
-                    f"🏆 Best F1 Score: {best_results['metrics']['f1']:.4f}"
+                    f"Singel worker completed {NUM_GRID_POINTS} trials sequentially"
                 )
-                main_logger.info("Best Parameters:")
-                for param_name, value in best_results["parameters"].items():
-                    main_logger.info(f"  {param_name}: {value}")
-        else:
-            main_logger.warning("No worker metrics files found to merge")
-            main_logger.warning("Check if any trials completed successfully")
-
-    except Exception as e:
-        main_logger.error(f"Error during metrics merging or result extraction: {e}")
-        main_logger.warning(
-            "Worker-specific files are preserved for manual post-processing"
-        )
 
     # Completion message for all modes
     main_logger.info("Grid search completed")
+
+    # Merge worker metrics
+    main_logger.info("Post-analysis on all workers through analyze_metrics.py")
 
 
 if __name__ == "__main__":
