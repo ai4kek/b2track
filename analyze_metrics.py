@@ -19,7 +19,6 @@ import seaborn as sns
 # Import utilities from src.scipy_opt_utils
 from src.scipy_opt_utils import (
     METRICS_FIELDS,
-    PARAM_SPACE,
     extract_best_results,
     merge_worker_metrics,
 )
@@ -46,19 +45,15 @@ def analyze_and_visualize(metrics_file="metrics_all.csv", best_results=None):
         logger.error(f"Error loading metrics file {metrics_file}: {e}")
         return
 
-    # Only print the best results, skip general data summary
-
     # Calculate harmonic mean (F1 score) if not already present
     if "f1" not in df.columns:
         df["f1"] = (
             2 * (df["efficiency"] * df["purity"]) / (df["efficiency"] + df["purity"])
         )
 
-    # Get best result coordinates if available
-    best_point = None
+    # Print best results if available
     if best_results:
         best_metrics = best_results["metrics"]
-        best_point = (best_metrics["efficiency"], best_metrics["purity"])
         print("\n=== Best Result ===")
         print(f"F1 Score: {best_metrics['f1']:.4f}")
         print(f"Efficiency: {best_metrics['efficiency']:.4f}")
@@ -67,33 +62,51 @@ def analyze_and_visualize(metrics_file="metrics_all.csv", best_results=None):
         for param, value in best_results["parameters"].items():
             print(f"  {param}: {value}")
 
-    # Plot efficiency vs purity with best result highlighted
-    plt.figure(figsize=(10, 8))
+    # Create plots
+    plot_efficiency_vs_purity_f1(df, best_results)
+    plot_efficiency_vs_purity_time(df)
 
-    # Extract columns by name for plotting
-    efficiency = pd.to_numeric(df["efficiency"], errors="coerce")
-    purity = pd.to_numeric(df["purity"], errors="coerce")
-    f1 = pd.to_numeric(df["f1"], errors="coerce")
+    # Create parameter heatmaps if we have enough data points
+    create_parameter_plots(df, best_results)
 
-    # Create a clean dataframe for plotting
+
+def plot_efficiency_vs_purity_f1(df, best_results=None):
+    """Plot efficiency vs purity with F1 score as colormap."""
+    # Extract columns and create clean dataframe
     plot_df = pd.DataFrame(
-        {"efficiency": efficiency, "purity": purity, "f1": f1}
+        {
+            "efficiency": pd.to_numeric(df["efficiency"], errors="coerce"),
+            "purity": pd.to_numeric(df["purity"], errors="coerce"),
+            "f1": pd.to_numeric(df["f1"], errors="coerce"),
+        }
     ).dropna()
 
-    scatter = sns.scatterplot(
+    # Create figure and axes
+    fig, ax = plt.subplots(figsize=(10, 8))
+
+    # Create colormap for F1 scores
+    norm = plt.Normalize(plot_df["f1"].min(), plot_df["f1"].max())
+    cmap = sns.color_palette("flare", as_cmap=True)
+
+    # Create scatter plot
+    sns.scatterplot(
         data=plot_df,
         x="efficiency",
         y="purity",
         hue="f1",
         size="f1",
         sizes=(20, 200),
-        palette="viridis",
+        palette="flare",
         alpha=0.7,
+        hue_norm=norm,
+        ax=ax,
     )
 
-    # Highlight the best result if available
-    if best_point:
-        plt.scatter(
+    # Highlight best result if available
+    if best_results:
+        best_metrics = best_results["metrics"]
+        best_point = (best_metrics["efficiency"], best_metrics["purity"])
+        ax.scatter(
             best_point[0],
             best_point[1],
             s=200,
@@ -104,8 +117,8 @@ def analyze_and_visualize(metrics_file="metrics_all.csv", best_results=None):
             label="Best Result",
         )
 
-        # Add annotation for best point
-        plt.annotate(
+        # Add annotation
+        ax.annotate(
             f"Best F1: {best_metrics['f1']:.4f}",
             xy=best_point,
             xytext=(10, 10),
@@ -113,17 +126,77 @@ def analyze_and_visualize(metrics_file="metrics_all.csv", best_results=None):
             bbox=dict(boxstyle="round,pad=0.3", fc="white", ec="red", alpha=0.8),
         )
 
-    plt.title("Tracking Efficiency vs Purity")
-    plt.xlabel("Efficiency")
-    plt.ylabel("Purity")
-    plt.grid(True, alpha=0.3)
-    plt.colorbar(scatter.collections[0], label="F1 Score")
-    plt.legend()
-    plt.tight_layout()
-    plt.savefig("efficiency_vs_purity.png", dpi=300)
-    plt.close()
+    # Customize plot
+    ax.set_title("Tracking Efficiency vs Purity (F1 Score)")
+    ax.set_xlabel("Efficiency")
+    ax.set_ylabel("Purity")
+    ax.grid(True, alpha=0.3)
+    fig.colorbar(plt.cm.ScalarMappable(cmap=cmap, norm=norm), ax=ax, label="F1 Score")
+    ax.legend()
+    fig.tight_layout()
 
-    # Create parameter heatmaps if we have enough data points
+    # Save and close
+    plt.savefig("efficiency_vs_purity_f1.png", dpi=300, bbox_inches="tight")
+    plt.close(fig)
+
+
+def plot_efficiency_vs_purity_time(df):
+    """Plot efficiency vs purity with execution time as colormap."""
+    # Extract columns and create clean dataframe
+    plot_df = pd.DataFrame(
+        {
+            "efficiency": pd.to_numeric(df["efficiency"], errors="coerce"),
+            "purity": pd.to_numeric(df["purity"], errors="coerce"),
+            "execution_time": pd.to_numeric(df["execution_time"], errors="coerce"),
+        }
+    ).dropna()
+
+    # Create figure and axes
+    fig, ax = plt.subplots(figsize=(10, 8))
+
+    # Create colormap for execution time
+    norm = plt.Normalize(
+        plot_df["execution_time"].min(), plot_df["execution_time"].max()
+    )
+    cmap = sns.color_palette("viridis", as_cmap=True)
+
+    # Create scatter plot
+    sns.scatterplot(
+        data=plot_df,
+        x="efficiency",
+        y="purity",
+        hue="execution_time",
+        size="execution_time",
+        sizes=(20, 200),
+        palette="viridis",
+        alpha=0.7,
+        hue_norm=norm,
+        ax=ax,
+    )
+
+    # Customize plot
+    ax.set_title("Tracking Efficiency vs Purity (Execution Time)")
+    ax.set_xlabel("Efficiency")
+    ax.set_ylabel("Purity")
+    ax.grid(True, alpha=0.3)
+    fig.colorbar(
+        plt.cm.ScalarMappable(cmap=cmap, norm=norm), ax=ax, label="Execution Time (s)"
+    )
+    ax.legend()
+    fig.tight_layout()
+
+    # Save and close
+    plt.savefig("efficiency_vs_purity_time.png", dpi=300, bbox_inches="tight")
+    plt.close(fig)
+
+
+def create_parameter_plots(df, best_results=None):
+    """Create parameter distribution plots and heatmaps.
+
+    Args:
+        df: DataFrame containing the metrics data
+        best_results: Dictionary containing the best results (optional)
+    """
     param_columns = [
         col
         for col in df.columns
@@ -155,26 +228,26 @@ def analyze_and_visualize(metrics_file="metrics_all.csv", best_results=None):
                     f1_values = pd.to_numeric(df["f1"], errors="coerce")
 
                     # Create a clean dataframe for pivoting
-                    pivot_df = pd.DataFrame(
-                        {param1: param1_values, param2: param2_values, "f1": f1_values}
-                    ).dropna()
+                    param1_values = sorted(df[param1].unique())
+                    param2_values = sorted(df[param2].unique())
+                    f1_matrix = np.zeros((len(param1_values), len(param2_values)))
 
-                    # Sort values to ensure consistent ordering
-                    param1_sorted = sorted(pivot_df[param1].unique())
-                    param2_sorted = sorted(pivot_df[param2].unique())
+                    # Fill the matrix with mean F1 scores
+                    for i, p1 in enumerate(param1_values):
+                        for j, p2 in enumerate(param2_values):
+                            f1_matrix[i, j] = df[
+                                (df[param1] == p1) & (df[param2] == p2)
+                            ]["f1"].mean()
 
-                    pivot = pivot_df.pivot_table(
-                        values="f1",
-                        index=param1,
-                        columns=param2,
-                        aggfunc="mean",  # Use string instead of function to avoid FutureWarning
+                    pivot = pd.DataFrame(
+                        f1_matrix, index=param1_values, columns=param2_values
                     )
 
-                    ax = sns.heatmap(
+                    sns.heatmap(
                         pivot,
+                        cmap="rocket",
                         annot=True,
-                        fmt=".4f",
-                        cmap="viridis",
+                        fmt=".3f",
                         cbar_kws={"label": "F1 Score"},
                     )
 
@@ -230,7 +303,7 @@ def analyze_and_visualize(metrics_file="metrics_all.csv", best_results=None):
                 param_sorted = sorted(plot_df[param].unique())
 
                 # Create violin plot with points
-                ax = sns.violinplot(
+                sns.violinplot(
                     x=param,
                     y="f1",
                     data=plot_df,
