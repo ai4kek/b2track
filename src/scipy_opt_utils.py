@@ -201,17 +201,11 @@ def update_worker_metrics(worker_id, trial_number, elapsed, metrics_path):
         last_row["worker_id"] = worker_id
         last_row["trial_number"] = trial_number
 
-        # Create a temporary file in the same directory
-        temp_path = metrics_path.with_suffix(".tmp")
-
-        # Write to the temporary file
-        with open(temp_path, "w", newline="") as f:
+        # Write all rows back
+        with open(metrics_path, "w", newline="") as f:
             writer = csv.DictWriter(f, fieldnames=fieldnames)
             writer.writeheader()
             writer.writerows(reader)
-
-        # Rename the temporary file to the original file (atomic operation on most systems)
-        temp_path.replace(metrics_path)
 
         logger.info(
             f"Worker {worker_id}, Trial {trial_number}: Updated metrics with execution time {elapsed:.2f}s"
