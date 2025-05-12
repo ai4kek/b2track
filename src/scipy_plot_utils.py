@@ -9,10 +9,10 @@ It merges worker metrics, extracts best results, and creates visualizations.
 import csv
 import json
 import logging
+import os
 from pathlib import Path
 
 import matplotlib.pyplot as plt
-import numpy as np
 import pandas as pd
 import seaborn as sns
 
@@ -193,7 +193,7 @@ def plot_efficiency_vs_purity_f1(df, best_results=None, ref_results=None):
         c=plot_df["f1"],
         cmap=cmap,
         norm=norm,
-        s=25,
+        s=50,
         alpha=0.6,
         label=None,
     )
@@ -284,7 +284,7 @@ def plot_efficiency_vs_purity_time(df, best_results=None, ref_results=None):
         c=plot_df["execution_time"],
         cmap=cmap,
         norm=norm,
-        s=100,
+        s=50,
         alpha=0.6,
         label=None,
     )
@@ -372,9 +372,6 @@ class ParameterPlotter:
         Create pairwise parameter F1 heatmaps using Seaborn, marking best and reference results if provided.
         """
         logger.info("Plotting heatmaps...")
-
-        import os
-
         os.makedirs(save_dir, exist_ok=True)
         if len(self.param_columns) >= 2 and len(self.df) >= 4:
             for i, param1 in enumerate(self.param_columns[:-1]):
@@ -388,8 +385,8 @@ class ParameterPlotter:
                         pivot = self.df.pivot_table(
                             index=param1, columns=param2, values="f1", aggfunc="mean"
                         )
-                        plt.figure(figsize=(10, 8))
-                        ax = sns.heatmap(
+                        fig, ax = plt.subplots(figsize=(10, 8))
+                        sns.heatmap(
                             pivot,
                             annot=True,
                             fmt=".3f",
@@ -400,7 +397,7 @@ class ParameterPlotter:
                         )
 
                         # Mark best and reference results
-                        def mark(ax, result, color, label):
+                        def mark(ax, result, color, marker, label):
                             if result is None:
                                 return
                             params = result.get("parameters", {})
@@ -424,32 +421,35 @@ class ParameterPlotter:
                                     if xi is not None and yi is not None:
                                         ax.scatter(
                                             xi + 0.5,
-                                            yi + 0.5,
-                                            s=200,
-                                            marker="*",
+                                            yi + 0.4,
+                                            s=100,
+                                            marker=marker,
                                             color=color,
-                                            edgecolor="black",
-                                            linewidth=1.5,
+                                            edgecolor=(
+                                                "darkred" if color == "red" else "navy"
+                                            ),
+                                            linewidth=2,
                                             zorder=10,
                                             label=label,
+                                            alpha=0.7 if color == "red" else 0.5,
                                         )
                                 except Exception:
                                     pass
 
-                        mark(ax, self.best_results, "red", "Best")
-                        mark(ax, self.ref_results, "blue", "Reference")
+                        mark(ax, self.best_results, "red", "*", "Best")
+                        mark(ax, self.ref_results, "blue", "o", "Reference")
                         ax.set_xlabel(param2)
                         ax.set_ylabel(param1)
                         ax.set_title(f"F1 Score Heatmap: {param1} vs {param2}")
                         handles, labels = ax.get_legend_handles_labels()
                         if handles:
                             ax.legend()
-                        plt.tight_layout()
-                        plt.savefig(
+                        fig.tight_layout()
+                        fig.savefig(
                             os.path.join(save_dir, f"heatmap_{param1}_vs_{param2}.png"),
                             dpi=300,
                         )
-                        plt.close()
+                        plt.close(fig)
                     except Exception as e:
                         logger.warning(
                             f"Failed to plot heatmap for {param1} vs {param2}: {e}"
@@ -461,14 +461,12 @@ class ParameterPlotter:
         """
         logger.info("Plotting violin plots...")
 
-        import os
-
         os.makedirs(save_dir, exist_ok=True)
         for param in self.param_columns:
             try:
                 plot_df = self.df[[param, "f1"]].dropna()
-                plt.figure(figsize=(10, 6))
-                ax = sns.violinplot(
+                fig, ax = plt.subplots(figsize=(10, 6))
+                sns.violinplot(
                     x=param, y="f1", data=plot_df, inner="quartile", color="lightgray"
                 )
                 # Overlay individual data points
@@ -484,7 +482,7 @@ class ParameterPlotter:
                 )
 
                 # Mark best and reference results
-                def mark(result, color, marker, label):
+                def mark(ax, result, color, marker, label):
                     if result and param in result.get("parameters", {}):
                         try:
                             val = float(result["parameters"][param])
@@ -493,34 +491,37 @@ class ParameterPlotter:
                             ax.scatter(
                                 [idx],
                                 [f1],
-                                s=200,
+                                s=50,
                                 marker=marker,
                                 color=color,
-                                edgecolor="black",
+                                edgecolor="darkred" if color == "red" else "navy",
                                 linewidth=1.5,
                                 zorder=10,
                                 label=label,
+                                alpha=0.7 if color == "red" else 0.5,
                             )
                         except Exception:
                             pass
 
                 # Mark best result (red star) and reference (blue circle)
-                mark(self.best_results, "red", "*", "Best Result")
-                mark(self.ref_results, "blue", "o", "Reference Result")
+                mark(ax, self.best_results, "red", "*", "Best")
+                mark(ax, self.ref_results, "blue", "o", "Reference")
+
                 # Remove duplicate legend entries
                 handles, labels = ax.get_legend_handles_labels()
                 by_label = dict(zip(labels, handles))
                 if by_label:
                     ax.legend(by_label.values(), by_label.keys())
+
                 ax.set_title(f"F1 Score Distribution by {param}")
                 ax.set_xlabel(param)
                 ax.set_ylabel("F1 Score")
                 plt.tight_layout()
-                plt.savefig(
+                fig.savefig(
                     os.path.join(save_dir, f"violin_{param}_f1.png"),
                     dpi=300,
                     bbox_inches="tight",
                 )
-                plt.close()
+                plt.close(fig)
             except Exception as e:
                 logger.warning(f"Could not create violin plot for {param}: {e}")

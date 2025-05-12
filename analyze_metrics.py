@@ -57,8 +57,8 @@ def main():
     plot_efficiency_vs_purity_time(df, best_results, ref_results)
 
     plotter = ParameterPlotter(df, best_results, ref_results)
-    plotter.plot_heatmaps()
     plotter.plot_violinplots()
+    plotter.plot_heatmaps()
 
 
 if __name__ == "__main__":
