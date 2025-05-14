@@ -16,6 +16,8 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
 
+from src.scipy_opt_utils import REF_PARAM
+
 # Set Matplotlib style for better visualization
 plt.style.use("seaborn-v0_8-darkgrid")
 
@@ -147,15 +149,23 @@ def extract_best_results(df):
     return result
 
 
-def extract_reference_results(df, index=10):
-    """Extract the reference results (by row index) from the DataFrame and save to JSON."""
-    logger.info("Extracting reference results from DataFrame")
-    if len(df) <= index:
-        logger.warning(f"Reference index {index} out of range in DataFrame")
+def extract_reference_results(df):
+    """Extract the reference results (matching REF_PARAM) from the DataFrame and save to JSON."""
+    logger.info("Extracting reference results from DataFrame using REF_PARAM")
+    # Build a mask for all parameter columns
+    mask = pd.Series([True] * len(df))
+    for param, val in REF_PARAM.items():
+        # Use == for numeric and object types (should match CSV typing)
+        mask &= df[param] == val
+
+    df_match = df[mask]
+
+    if df_match.empty:
+        logger.warning(f"No row found in DataFrame matching REF_PARAM: {REF_PARAM}")
         return None
 
-    # Get the row at the specified index
-    ref_row = df.iloc[index]
+    # Use the first matching row
+    ref_row = df_match.iloc[0]
     result = extract_results_from_row(ref_row)
 
     # Save to JSON

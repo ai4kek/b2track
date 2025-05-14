@@ -50,7 +50,7 @@ def main():
 
     # Extract best and reference results
     best_results = extract_best_results(df)
-    ref_results = extract_reference_results(df, index=10)
+    ref_results = extract_reference_results(df)
 
     # Visualize
     plot_efficiency_vs_purity_f1(df, best_results, ref_results)

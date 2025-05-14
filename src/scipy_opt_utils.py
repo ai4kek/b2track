@@ -78,11 +78,20 @@ logger = get_worker_logger()
 
 # Parameter space
 PARAM_SPACE = {
-    "maximalDeltaPhi": [0.2, 0.3, 0.4],
-    "maximalLayerJump": [5, 6, 7, 8],
-    "minimalPtRequirement": [0.0, 0.1],
-    "pathMaximalCandidatesInFlight": [2, 3],
-    "stateMaximalHitCandidates": [3, 4],
+    "maximalDeltaPhi": [0.2, 0.4, 0.5],  # def: 0.3926990
+    "maximalLayerJump": [4, 5, 6, 7, 8],  # def: 4
+    "minimalPtRequirement": [0.0, 0.1],  # def: 0
+    "pathMaximalCandidatesInFlight": [3, 4],  # def: 3
+    "stateMaximalHitCandidates": [3, 4, 5],  # def: 4
+}
+
+# Reference parameter set
+REF_PARAM = {
+    "maximalDeltaPhi": 0.4,
+    "maximalLayerJump": 4,
+    "minimalPtRequirement": 0.0,
+    "pathMaximalCandidatesInFlight": 3,
+    "stateMaximalHitCandidates": 4,
 }
 
 # Metrics fields
