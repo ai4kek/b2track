@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
-"""
-Belle II Tracking Parameter Grid Search
+"""Belle II Tracking Parameter Grid Search
 
 This script performs a grid search over tracking parameters to optimize F1 score.
 It supports three execution modes:
@@ -13,11 +12,12 @@ It supports three execution modes:
    python3 run_scipy_grid.py --workers <N>
    Example: python3 run_scipy_grid.py --workers 4
 
-3. Cluster Mode:
-   - LSF: bsub -J "grid[1-<N>]" python3 run_scipy_grid.py --cluster
-     Example: bsub -J "grid[1-5]" python3 run_scipy_grid.py --cluster
-   - Slurm: sbatch --array=1-<N> run_scipy_grid.py --cluster
-     Example: sbatch --array=1-5 run_scipy_grid.py --cluster
+3. LSF Cluster Mode:
+   bsub -J "grid[1-<N>]" python3 run_scipy_grid.py --cluster
+   Example: bsub -J "grid[1-5]" python3 run_scipy_grid.py --cluster
+   
+   Note: Must be run as an LSF job array. The script uses LSB_JOBINDEX and
+   LSB_JOBINDEX_END environment variables to distribute work across workers.
 
 Output:
 - metrics_all.csv: Contains all results from all workers/jobs
@@ -29,24 +29,16 @@ import itertools
 import json
 import os
 from multiprocessing import Pool
-from pathlib import Path
 
 from src.scipy_opt_utils import (
-    METRICS_FIELDS,
     PARAM_SPACE,
-    cleanup_worker_files,
-    extract_best_results,
+    get_main_logger,
     get_worker_file_path,
     get_worker_logger,
     init_worker,
-    merge_worker_metrics,
     run_tracking_with_params,
     update_worker_metrics,
 )
-
-# Get the main process logger (no worker_id means main process)
-main_logger = get_worker_logger()
-main_logger.info("Grid search started")
 
 # Generate the grid of all parameter combinations
 GRID = list(itertools.product(*[PARAM_SPACE[k] for k in PARAM_SPACE.keys()]))
@@ -169,6 +161,10 @@ def main():
     3. Local single worker
     """
 
+    # Initialize main logger
+    main_logger = get_main_logger()
+    main_logger.info("Grid search started")
+
     # Parse arguments
     parser = argparse.ArgumentParser(description="Grid Search.")
     parser.add_argument(
@@ -179,115 +175,166 @@ def main():
     parser.add_argument(
         "--cluster",
         action="store_true",
-        help="Run in cluster mode (LSF or Slurm)",
+        help="Run in LSF cluster mode",
     )
     args = parser.parse_args()
 
-    # Clean shared output files
-    Path("metrics_all.csv").unlink(missing_ok=True)
-    Path("best_results.json").unlink(missing_ok=True)
+    # Log grid points and parameter space
+    main_logger.info(f"Total grid points to process: {NUM_GRID_POINTS}")
+    main_logger.info("Parameter space:")
+    for param, values in PARAM_SPACE.items():
+        main_logger.info(f"  {param}: {len(values)} values = {values}")
 
     # ==== Cluster Mode ====
     if args.cluster:
 
-        # Get cluster job ID and total jobs
-        if "LSB_JOBINDEX" in os.environ:  # LSF
-            job_id = int(os.environ["LSB_JOBINDEX"])
-            n_jobs = int(os.environ["LSB_JOBINDEX_END"])
-            cluster_type = "LSF"
-        elif "SLURM_ARRAY_TASK_ID" in os.environ:  # Slurm
-            job_id = int(os.environ["SLURM_ARRAY_TASK_ID"])
-            n_jobs = int(os.environ["SLURM_ARRAY_TASK_COUNT"])
-            cluster_type = "Slurm"
-        else:
-            raise RuntimeError("No cluster environment variables found")
+        # Get LSF job array information
+        if "LSB_JOBINDEX" not in os.environ or "LSB_JOBINDEX_END" not in os.environ:
+            raise RuntimeError(
+                "LSF environment variables not found. Must run as LSF job array."
+            )
+
+        # LSF uses 1-based indexing for job arrays
+        job_id = int(os.environ["LSB_JOBINDEX"])  # Current job index (1-based)
+        n_jobs = int(os.environ["LSB_JOBINDEX_END"])  # Total number of jobs
 
         # Get worker logger for status updates
         worker_logger = get_worker_logger(job_id)
 
-        # Log cluster job information
-        main_logger.info(f"Grid Search on {cluster_type} with {n_jobs} Jobs")
+        # Log LSF job information
+        main_logger.info(f"Grid Search on LSF with {n_jobs} Jobs")
         main_logger.info(f"Worker {job_id} started for distributed processing")
+
+        worker_logger.info(f"Worker {job_id} started for distributed processing")
         worker_logger.info(f"Worker {job_id} is one of {n_jobs} total workers")
 
         # Clean old worker files
         # cleanup_worker_files(job_id)
 
-        # Calculate chunk size and get this worker's chunk
-        chunk_size = (NUM_GRID_POINTS + n_jobs - 1) // n_jobs
-        start_idx = (job_id - 1) * chunk_size
-        end_idx = min(job_id * chunk_size, NUM_GRID_POINTS)
+        # LSF job_id is already 1-based, use it directly
+        worker_id = job_id  # 1-based worker ID
 
-        # Process only the trials assigned to this worker
-        if start_idx < NUM_GRID_POINTS:
-            worker_logger.info(
-                f"Worker {job_id} processing trials {start_idx+1} to {end_idx} ({end_idx-start_idx} trials)"
+        # Calculate base chunk size and remainder
+        base_chunk_size = NUM_GRID_POINTS // n_jobs
+        remainder = NUM_GRID_POINTS % n_jobs
+
+        # Calculate this worker's exact chunk boundaries
+        # Workers 1 to remainder get one extra trial each
+        start_idx = (worker_id - 1) * base_chunk_size + min(worker_id - 1, remainder)
+        end_idx = start_idx + base_chunk_size + (1 if worker_id <= remainder else 0)
+
+        # Log distribution details in main logger
+        main_logger.info(
+            f"Distribution strategy for {NUM_GRID_POINTS} trials across {n_jobs} workers:"
+        )
+        main_logger.info(f"  - Base chunk size: {base_chunk_size} trials per worker")
+        if remainder > 0:
+            main_logger.info(
+                f"  - First {remainder} workers get {base_chunk_size + 1} trials"
             )
-            job_chunk = GRID[start_idx:end_idx]
-
-            try:
-                # Process the chunk
-                trials_processed = process_chunk(job_id, job_chunk)
-                worker_logger.info(
-                    f"Worker {job_id} completed {trials_processed} out of {len(job_chunk)} assigned trials"
-                )
-
-                # Check if all trials were processed successfully
-                if trials_processed < len(job_chunk):
-                    failed_trials = len(job_chunk) - trials_processed
-                    worker_logger.warning(
-                        f"Worker {job_id} failed to process {failed_trials} trials"
-                    )
-                    main_logger.warning(
-                        f"Worker {job_id} failed to process {failed_trials} trials"
-                    )
-
-            except Exception as e:
-                worker_logger.error(f"Worker {job_id} failed with error: {e}")
-                main_logger.error(f"Worker {job_id} failed with error: {e}")
-                # Even if the worker fails, try to merge available results
-                worker_logger.info(
-                    "Attempting to merge available results despite worker failure"
-                )
+            main_logger.info(f"  - Remaining workers get {base_chunk_size} trials")
         else:
+            main_logger.info("  - All workers get exactly same number of trials")
+
+        # Log this worker's specific assignment
+        worker_logger.info(f"Worker {worker_id} assignment details:")
+        worker_logger.info(
+            f"  - Processing trials {start_idx+1} to {end_idx} ({end_idx-start_idx} trials)"
+        )
+        worker_logger.info(
+            f"  - This is a {'larger' if worker_id <= remainder else 'standard'} chunk"
+        )
+
+        # Log parameter combinations for this worker
+        worker_logger.info("First trial parameters in this worker's chunk:")
+        param_names = list(PARAM_SPACE.keys())
+        first_params = dict(zip(param_names, GRID[start_idx]))
+        for param, value in first_params.items():
+            worker_logger.info(f"  - {param}: {value}")
+
+        # Get this worker's chunk of trials
+        job_chunk = GRID[start_idx:end_idx]
+
+        try:
+            # Process the chunk
+            trials_processed = process_chunk(job_id, job_chunk)
+            worker_logger.info(
+                f"Worker {job_id} completed {trials_processed} out of {len(job_chunk)} assigned trials"
+            )
+
+            # Check if any trials failed
+            if trials_processed < len(job_chunk):
+                failed_trials = len(job_chunk) - trials_processed
+                worker_logger.warning(
+                    f"Worker {job_id} failed to process {failed_trials} trials"
+                )
+                main_logger.warning(
+                    f"Worker {job_id} failed to process {failed_trials} trials"
+                )
+
+        except Exception as e:
+            worker_logger.error(f"Worker {job_id} failed with error: {e}")
+            main_logger.error(f"Worker {job_id} failed with error: {e}")
+
+        # Log completion
+        worker_logger.info(f"Worker {job_id} completed processing")
+        main_logger.info(f"Worker {job_id} completed processing")
+
+        if start_idx >= NUM_GRID_POINTS:
             worker_logger.warning(
                 f"Worker {job_id} has no trials to process (start_idx={start_idx} >= n_grid_points={NUM_GRID_POINTS})"
             )
 
-        # Worker completion message
-        worker_logger.info(f"Worker {job_id} results preserved for post-processing")
-        main_logger.info(f"Worker {job_id} completed processing")
-
     else:
         # ==== Multi-Worker Mode ====
         if args.workers is not None and args.workers > 1:
-
             main_logger.info(f"Grid Search with {args.workers} Local Workers")
             main_logger.info(
                 f"Starting {args.workers} workers for distributed processing"
             )
-            main_logger.info(f"Distributing {NUM_GRID_POINTS} trials across workers")
 
-            # Calculate chunk size for each worker
-            chunk_size = (NUM_GRID_POINTS + args.workers - 1) // args.workers
+            # Calculate base chunk size and remainder for even distribution
+            base_chunk_size = NUM_GRID_POINTS // args.workers
+            remainder = NUM_GRID_POINTS % args.workers
 
             # Create chunks with 1-based worker IDs
             worker_args = []
-            for i in range(args.workers):
-                worker_id = i + 1  # 1-based worker IDs
-                start_idx = i * chunk_size
-                end_idx = min((i + 1) * chunk_size, NUM_GRID_POINTS)
+
+            # Log distribution strategy
+            main_logger.info(
+                f"Distribution strategy for {NUM_GRID_POINTS} trials across {args.workers} workers:"
+            )
+            main_logger.info(
+                f"  - Base chunk size: {base_chunk_size} trials per worker"
+            )
+            if remainder > 0:
+                main_logger.info(
+                    f"  - First {remainder} workers get {base_chunk_size + 1} trials"
+                )
+                main_logger.info(f"  - Remaining workers get {base_chunk_size} trials")
+            else:
+                main_logger.info("  - All workers get exactly same number of trials")
+
+            for worker_id in range(1, args.workers + 1):  # 1-based worker IDs
+                # Calculate exact chunk boundaries for this worker
+                start_idx = (worker_id - 1) * base_chunk_size + min(
+                    worker_id - 1, remainder
+                )
+                end_idx = (
+                    start_idx + base_chunk_size + (1 if worker_id <= remainder else 0)
+                )
+
                 if start_idx < NUM_GRID_POINTS:
                     worker_args.append((worker_id, GRID[start_idx:end_idx]))
                     main_logger.info(
-                        f"Worker {worker_id} assigned trials {start_idx+1} to {end_idx} ({end_idx-start_idx} trials)"
+                        f"Worker {worker_id} assignment: trials {start_idx+1} to {end_idx} "
+                        f"({end_idx-start_idx} trials, {'larger' if worker_id <= remainder else 'standard'} chunk)"
                     )
 
-            # Create pool and run grid search - each worker processes its entire chunk
+            # Create pool and run grid search
             try:
                 with Pool(processes=args.workers) as pool:
                     # Use starmap to assign each chunk to a worker
-                    # Handle worker failures by setting timeout
                     results = pool.starmap(process_chunk, worker_args)
 
                     # Check results from all workers
@@ -302,12 +349,8 @@ def main():
                         main_logger.warning(
                             f"Failed to process {failed_trials} trials across all workers"
                         )
-                        main_logger.warning(
-                            f"Failed to process {failed_trials} trials across all workers"
-                        )
 
             except Exception as e:
-                main_logger.error(f"Distributed processing failed with error: {e}")
                 main_logger.error(f"Distributed processing failed with error: {e}")
                 # Even if some workers fail, try to merge available results
                 main_logger.info(
@@ -316,18 +359,18 @@ def main():
 
             finally:
                 main_logger.info(
-                    "Multi-worker processing completed - worker files preserved for merging at the end"
+                    "Multi-worker processing completed - worker files preserved for merging"
                 )
 
         # ==== Single Worker Mode ====
         else:
             # Single worker mode (only when --workers is not specified)
             main_logger.info("Grid Search with Single Worker")
-            main_logger.info("Starting 1 worker for sequential processing")
+            main_logger.info("Starting worker 1 for sequential processing")
             main_logger.info(f"Processing {NUM_GRID_POINTS} trials sequentially")
 
-            # Process all trials using process_chunk (use worker_id=1)
-            worker_id = 1
+            # Process all trials using worker_id=1 (1-based)
+            worker_id = 1  # Always use worker_id 1 for single worker mode
             trials_processed = process_chunk(worker_id, GRID)
 
             # Log completion status

@@ -10,11 +10,11 @@ import json
 import logging
 import os
 import subprocess
-import sys
 import time
+from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
-# Configure logging directory
+# --- Logging ---
 log_dir = Path("logs")
 log_dir.mkdir(exist_ok=True)
 
@@ -23,61 +23,9 @@ FORMATTER = logging.Formatter(
     "%(asctime)s - %(processName)s - %(levelname)s - %(message)s"
 )
 
-
-def get_worker_logger(worker_id=None):
-    """
-    Get a logger for a specific worker or the main process.
-
-    Args:
-        worker_id (int, optional): Worker ID. If None, returns the main process logger.
-
-    Returns:
-        Logger: A configured logger instance
-    """
-    if worker_id is None:
-        # Main process logger
-        logger_name = "grid_main"
-        log_file = log_dir / "logs_main.log"
-    else:
-        # Worker-specific logger
-        logger_name = f"grid_worker_{worker_id:03d}"
-        log_file = log_dir / f"logs_worker_{worker_id:03d}.log"
-
-    # Create logger
-    logger = logging.getLogger(logger_name)
-
-    # Only configure if not already configured
-    if not logger.handlers:
-        logger.setLevel(logging.INFO)
-        logger.propagate = False  # Don't propagate to parent logger
-
-        # Always add console handler
-        stream_handler = logging.StreamHandler(sys.stdout)
-        stream_handler.setFormatter(FORMATTER)
-        logger.addHandler(stream_handler)
-
-        # Try to add file handler
-        try:
-            # Remove existing log file if it exists
-            if log_file.exists():
-                log_file.unlink()
-
-            # Create new file handler
-            file_handler = logging.FileHandler(log_file)
-            file_handler.setFormatter(FORMATTER)
-            logger.addHandler(file_handler)
-        except Exception as e:
-            print(f"Warning: Could not create log file for {logger_name}: {e}")
-            print(f"Continuing with console logging only for {logger_name}")
-
-    return logger
-
-
-# Create a default logger for the module
-logger = get_worker_logger()
-
-# Parameter space
-PARAM_SPACE = {
+# --- Optimization Parameter Definitions ---
+# All parameter ranges for grid/random search
+PARAM_SPACE_1 = {
     "maximalDeltaPhi": [0.2, 0.4, 0.5],  # def: 0.3926990
     "maximalLayerJump": [4, 5, 6, 7, 8],  # def: 4
     "minimalPtRequirement": [0.0, 0.1],  # def: 0
@@ -85,7 +33,16 @@ PARAM_SPACE = {
     "stateMaximalHitCandidates": [3, 4, 5],  # def: 4
 }
 
-# Reference parameter set
+# Quick test space
+PARAM_SPACE = {
+    "maximalDeltaPhi": [0.2, 0.4],
+    "maximalLayerJump": [4, 5],
+    "minimalPtRequirement": [0.0],
+    "pathMaximalCandidatesInFlight": [3],
+    "stateMaximalHitCandidates": [3, 4],
+}
+
+# Reference parameter set for baseline comparison
 REF_PARAM = {
     "maximalDeltaPhi": 0.4,
     "maximalLayerJump": 4,
@@ -94,7 +51,7 @@ REF_PARAM = {
     "stateMaximalHitCandidates": 4,
 }
 
-# Metrics fields
+# CSV column order for metrics files
 METRICS_FIELDS = [
     # Parameters first (dynamic based on PARAM_SPACE)
     *list(PARAM_SPACE.keys()),
@@ -109,28 +66,79 @@ METRICS_FIELDS = [
     "trial_number",
 ]
 
-# Tracking command
+# Command to run the Belle II tracking pipeline
 TRACKING_CMD = ["basf2", "run_tracking_svd.py", "--"]
 
-# Optimization settings
+# General optimization settings
 MAX_TRIALS = 20
 RANDOM_SEED = 42
+
+
+# Logger functions
+def get_main_logger():
+    """
+    Get the main process logger (file + stream handlers).
+    Used for all logging in the main process (not worker-specific).
+    """
+    logger_name = "grid_main"
+    log_file = log_dir / "logs_main.log"
+    logger = logging.getLogger(logger_name)
+    logger.setLevel(logging.INFO)
+    logger.propagate = False
+
+    # Remove previous handlers to avoid duplicate logs
+    if logger.hasHandlers():
+        logger.handlers.clear()
+
+    # File handler with rotating file handler
+    file_handler = RotatingFileHandler(
+        filename=log_file, maxBytes=10 * 1024 * 1024, backupCount=5  # 10MB
+    )
+    file_handler.setFormatter(FORMATTER)
+    logger.addHandler(file_handler)
+
+    # Stream handler for console output
+    stream_handler = logging.StreamHandler()
+    stream_handler.setFormatter(FORMATTER)
+    logger.addHandler(stream_handler)
+    return logger
+
+
+def get_worker_logger(worker_id):
+    """
+    Get a logger for a specific worker (file handler only).
+    Each worker writes to its own log file for easier debugging.
+    """
+    logger_name = f"grid_worker_{worker_id:03d}"
+    log_file = log_dir / f"logs_worker_{worker_id:03d}.log"
+    logger = logging.getLogger(logger_name)
+    logger.setLevel(logging.INFO)
+    logger.propagate = False
+    if logger.hasHandlers():
+        logger.handlers.clear()
+
+    # File handler with rotating file handler for worker-specific logs
+    file_handler = RotatingFileHandler(
+        filename=log_file, maxBytes=10 * 1024 * 1024, backupCount=5  # 10MB
+    )
+    file_handler.setFormatter(FORMATTER)
+    logger.addHandler(file_handler)
+    return logger
 
 
 # Helper functions
 def init_worker(worker_id):
     """
     Initialize worker environment.
-
+    Sets up environment variable and logs worker startup.
     Args:
         worker_id (int): Worker ID.
     """
-    # Set worker ID in environment variables for potential use by subprocesses
+    main_logger = get_main_logger()
+    worker_logger = get_worker_logger(worker_id)
     os.environ["WORKER_ID"] = str(worker_id)
-
-    # Get worker-specific logger and log initialization
-    logger = get_worker_logger(worker_id)
-    logger.info(f"Worker {worker_id} initialized (PID: {os.getpid()})")
+    worker_logger.info(f"Worker {worker_id} initialized (PID: {os.getpid()})")
+    main_logger.info(f"Worker {worker_id} initialized (PID: {os.getpid()})")
 
 
 def compute_param_hash(params):
@@ -161,15 +169,16 @@ def get_worker_file_path(worker_id, file_type):
 
 
 def cleanup_worker_files(worker_id):
-    """Clean up files for a specific worker.
-
+    """
+    Delete parameter and metrics files for a specific worker.
+    Useful for cleaning up after a job or before rerunning.
     Args:
         worker_id (int): Worker ID for file cleanup.
     """
     if worker_id is None:
         raise ValueError("Worker ID must be provided")
 
-    # Clean this worker's files
+    # Remove both params and metrics files for this worker
     for file_type in ["params", "metrics"]:
         worker_file = get_worker_file_path(worker_id, file_type)
         if worker_file.exists():
@@ -180,319 +189,134 @@ def update_worker_metrics(worker_id, trial_number, elapsed, metrics_path):
     """
     Update the most recent (last) row in the metrics CSV with execution_time, worker_id, and trial_number.
     If the file doesn't exist, log a warning and return.
+    Called after a worker finishes a trial to record timing and IDs.
     """
+    main_logger = get_main_logger()
     metrics_path = Path(metrics_path)
-
-    # Check if metrics file exists
     if not metrics_path.exists():
-        logger.warning(
+        main_logger.warning(
             f"Worker {worker_id}, Trial {trial_number}: Metrics file {metrics_path} does not exist. "
             f"Cannot update with execution time {elapsed:.2f}s"
         )
         return
-
     try:
-        # Read all rows
-        with open(metrics_path, "r", newline="") as f:
+        # Read all rows from metrics file
+        with metrics_path.open("r", newline="") as f:
             reader = list(csv.DictReader(f))
             fieldnames = reader[0].keys() if reader else []
-
         if not reader:
-            logger.warning(
+            main_logger.warning(
                 f"Worker {worker_id}, Trial {trial_number}: Metrics file {metrics_path} is empty. "
                 f"Cannot update with execution time {elapsed:.2f}s"
             )
             return
 
-        # Update the last row
+        # Update last row with timing and IDs
         last_row = reader[-1]
-        last_row["execution_time"] = f"{elapsed:.2f}"  # Format with 2 decimal places
+        last_row["execution_time"] = f"{elapsed:.2f}"
         last_row["worker_id"] = worker_id
         last_row["trial_number"] = trial_number
 
-        # Write all rows back
-        with open(metrics_path, "w", newline="") as f:
+        # Write updated rows back to file
+        with metrics_path.open("w", newline="") as f:
             writer = csv.DictWriter(f, fieldnames=fieldnames)
             writer.writeheader()
             writer.writerows(reader)
-
-        logger.info(
+        main_logger.info(
             f"Worker {worker_id}, Trial {trial_number}: Updated metrics with execution time {elapsed:.2f}s"
         )
     except Exception as e:
-        logger.error(
+        main_logger.error(
             f"Worker {worker_id}, Trial {trial_number}: Error updating metrics file {metrics_path}: {e}"
         )
-
-
-def merge_worker_metrics(metrics_fields, output_file="metrics_all.csv"):
-    """Merge all worker metrics files into a single metrics.csv, sorted by worker and trial.
-
-    Handles missing or incomplete files gracefully. If a file cannot be read or
-    is missing expected columns, it will be skipped with a warning.
-
-    Args:
-        metrics_fields: List of field names for the CSV
-        output_file: Path to the output merged file
-
-    Returns:
-        bool: True if at least one row was merged, False otherwise
-    """
-    all_rows = []
-    worker_files = sorted(Path().glob("metrics_worker_*.csv"))
-
-    if not worker_files:
-        logger.warning("No worker metrics files found to merge")
-        return False
-
-    for worker_file in worker_files:
-        try:
-            with worker_file.open() as f:
-                reader = csv.DictReader(f)
-
-                # Verify the file has the expected structure
-                if not set(metrics_fields).issubset(set(reader.fieldnames or [])):
-                    logger.warning(f"Skipping {worker_file}: missing required columns")
-                    continue
-
-                file_rows = list(reader)
-                if not file_rows:
-                    logger.warning(
-                        f"Skipping {worker_file}: file is empty or has only header"
-                    )
-                    continue
-
-                all_rows.extend(file_rows)
-                logger.info(f"Merged {len(file_rows)} rows from {worker_file}")
-        except Exception as e:
-            logger.warning(f"Error reading {worker_file}: {e}")
-            continue
-
-    if not all_rows:
-        logger.warning("No valid rows found in any worker metrics files")
-        return False
-
-    # Sort by worker_id and trial_number if present
-    all_rows.sort(
-        key=lambda x: (int(x.get("worker_id", 0)), int(x.get("trial_number", 0)))
-    )
-
-    with Path(output_file).open("w", newline="") as f:
-        writer = csv.DictWriter(f, fieldnames=metrics_fields)
-        writer.writeheader()
-        writer.writerows(all_rows)
-
-    logger.info(f"Successfully merged {len(all_rows)} rows into {output_file}")
-    return len(all_rows) > 0
-
-
-def extract_best_results(metrics_file="metrics_all.csv"):
-    """Extract the best results from the merged metrics file.
-
-    Args:
-        metrics_file: Path to the metrics CSV file
-
-    Returns:
-        dict: A dictionary containing the best parameters, F1 score, and other metrics
-              or None if the file doesn't exist or has no valid rows
-    """
-    metrics_path = Path(metrics_file)
-    if not metrics_path.exists():
-        logger.warning(f"Metrics file {metrics_file} does not exist")
-        return None
-
-    try:
-        with metrics_path.open("r", newline="") as f:
-            reader = csv.DictReader(f)
-
-            # Check if the file has the required columns
-            if not reader.fieldnames or "f1" not in reader.fieldnames:
-                logger.warning(
-                    f"Metrics file {metrics_file} is missing required columns"
-                )
-                return None
-
-            rows = list(reader)
-    except Exception as e:
-        logger.error(f"Error reading metrics file {metrics_file}: {e}")
-        return None
-
-    if not rows:
-        logger.warning(f"No data rows found in metrics file {metrics_file}")
-        return None
-
-    # Filter out rows with invalid F1 scores
-    valid_rows = []
-    for row in rows:
-        try:
-            f1 = float(row.get("f1", 0))
-            if f1 >= 0:
-                valid_rows.append(row)
-            else:
-                logger.warning(f"Skipping row with invalid F1 score: {row}")
-        except (ValueError, TypeError):
-            logger.warning(f"Skipping row with non-numeric F1 score: {row}")
-            continue
-
-    if not valid_rows:
-        logger.warning(f"No valid rows with F1 scores found in {metrics_file}")
-        return None
-
-    # Find the row with the highest F1 score
-    best_row = max(valid_rows, key=lambda x: float(x.get("f1", 0)))
-    logger.info(f"Found best result with F1 score: {best_row.get('f1')}")
-
-    # Extract parameter values (all fields except metrics and execution info)
-    param_fields = [
-        f
-        for f in best_row.keys()
-        if f
-        not in [
-            "efficiency",
-            "purity",
-            "f1",
-            "finalstate",
-            "execution_time",
-            "worker_id",
-            "trial_number",
-        ]
-    ]
-
-    best_params = {k: best_row[k] for k in param_fields}
-
-    # Create results dictionary
-    best_results = {
-        "parameters": best_params,
-        "metrics": {
-            "f1": float(best_row.get("f1", 0)),
-            "efficiency": float(best_row.get("efficiency", 0)),
-            "purity": float(best_row.get("purity", 0)),
-            "finalstate": best_row.get("finalstate", ""),
-        },
-        "execution": {
-            "worker_id": int(best_row.get("worker_id", 0)),
-            "trial_number": int(best_row.get("trial_number", 0)),
-            "execution_time": float(best_row.get("execution_time", 0)),
-        },
-    }
-
-    return best_results
 
 
 def run_tracking_with_params(
     trial_number, worker_id, params_path, metrics_path, max_retries=3
 ):
-    """Execute tracking pipeline and return execution time.
-    Writes parameters to a worker-specific JSON file and runs the tracking command.
-    The F1 score is written directly to the metrics file by the tracking command.
-
+    """
+    Execute the Belle II tracking pipeline for a given parameter set.
+    Handles retries and logs all output/errors. Returns elapsed time or 0.0 on failure.
     Args:
         trial_number: Trial sequence number
         worker_id: Worker/job ID
         params_path: Path to parameter JSON file
         metrics_path: Path to metrics CSV file
         max_retries: Maximum number of retries on failure
-
     Returns:
         float: Elapsed execution time in seconds
     """
-
+    main_logger = get_main_logger()
     for attempt in range(max_retries):
         start = time.time()
         try:
-            # Construct the command with proper arguments
+            # Build the command for this trial
             cmd = TRACKING_CMD + [
                 f"--params={params_path}",
                 f"--metrics={metrics_path}",
             ]
-
-            # Convert command list to string for shell=True
             cmd_str = " ".join(cmd)
+            main_logger.info(f"Worker {worker_id}: Running command: {cmd_str}")
 
-            logger.info(f"Worker {worker_id}: Running command: {cmd_str}")
-
-            # Run the command and display output
-            result = subprocess.run(
+            # Run the tracking command (stdout/stderr go to cluster job files)
+            subprocess.run(
                 cmd_str,
                 shell=True,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
                 check=True,  # This will raise an exception if the command fails
-                encoding="utf-8",
                 timeout=3600,  # 1 hour timeout
             )
-
-            # Log the output from run_tracking_svd.py
-            if result.stdout:
-                logger.info(
-                    f"Worker {worker_id}, Trial {trial_number} stdout:\n{result.stdout}"
-                )
-            if result.stderr:
-                logger.warning(
-                    f"Worker {worker_id}, Trial {trial_number} stderr:\n{result.stderr}"
-                )
             elapsed = time.time() - start
-
-            # Return elapsed time
             return elapsed
-
         except subprocess.TimeoutExpired:
-            logger.error(
+            main_logger.error(
                 f"Worker {worker_id}, Trial {trial_number}: Tracking command timed out after 1 hour"
             )
             if attempt < max_retries - 1:
-                logger.info(f"Retrying... (attempt {attempt + 1}/{max_retries})")
+                main_logger.info(f"Retrying... (attempt {attempt + 1}/{max_retries})")
                 time.sleep(5)  # Wait before retry
                 continue
-
         except Exception as e:
-            logger.error(
+            main_logger.error(
                 f"Worker {worker_id}, Trial {trial_number}: Tracking command failed: {e}"
             )
             if attempt < max_retries - 1:
-                logger.info(f"Retrying... (attempt {attempt + 1}/{max_retries})")
+                main_logger.info(f"Retrying... (attempt {attempt + 1}/{max_retries})")
                 time.sleep(5)  # Wait before retry
                 continue
 
     # If all attempts failed, create a minimal metrics file with failure information
     # This ensures update_worker_metrics will have something to update
-    logger.error(
+    main_logger.error(
         f"Worker {worker_id}, Trial {trial_number}: All {max_retries} attempts failed"
     )
 
-    # Check if metrics file exists, if not create a minimal one
+    # Create a minimal metrics file if missing
     if not Path(metrics_path).exists():
         try:
-            # Load parameters from the params file
             with open(params_path, "r") as f:
                 params = json.load(f)
-
-            # Create a minimal metrics file with the parameters and default metrics
             with open(metrics_path, "w", newline="") as f:
                 writer = csv.DictWriter(f, fieldnames=METRICS_FIELDS)
                 writer.writeheader()
-
-                # Create a row with parameters and default metrics
+                # Fill with default/failure values
                 row = {
-                    **params,  # Parameters from JSON
-                    "efficiency": "0.0000",  # Default efficiency
-                    "purity": "0.0000",  # Default purity
-                    "f1": "0.0000",  # Default F1 score
-                    "finalstate": "failed",  # Mark as failed
-                    "execution_time": "",  # Will be updated by update_worker_metrics
-                    "worker_id": "",  # Will be updated by update_worker_metrics
-                    "trial_number": "",  # Will be updated by update_worker_metrics
+                    **params,
+                    "efficiency": "0.0000",
+                    "purity": "0.0000",
+                    "f1": "0.0000",
+                    "finalstate": "failed",
+                    "execution_time": "",
+                    "worker_id": "",
+                    "trial_number": "",
                 }
                 writer.writerow(row)
-
-            logger.info(
+            main_logger.info(
                 f"Worker {worker_id}, Trial {trial_number}: Created minimal metrics file after failure"
             )
         except Exception as e:
-            logger.error(
+            main_logger.error(
                 f"Worker {worker_id}, Trial {trial_number}: Failed to create minimal metrics file: {e}"
             )
-
     return 0.0
 
 
