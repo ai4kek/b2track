@@ -238,6 +238,15 @@ def main():
 
         # Log this worker's specific assignment
         worker_logger.info(f"Worker {worker_id} assignment details:")
+
+        # Exit early if this worker has no trials to process
+        if start_idx >= NUM_GRID_POINTS:
+            msg = f"Worker {worker_id} has no trials to process (all {NUM_GRID_POINTS} have been assigned already)"
+            worker_logger.warning(msg)
+            main_logger.warning(msg)
+            return
+
+        # Log assignment details for workers with trials
         worker_logger.info(
             f"  - Processing trials {start_idx+1} to {end_idx} ({end_idx-start_idx} trials)"
         )
@@ -258,32 +267,25 @@ def main():
         try:
             # Process the chunk
             trials_processed = process_chunk(job_id, job_chunk)
-            worker_logger.info(
-                f"Worker {job_id} completed {trials_processed} out of {len(job_chunk)} assigned trials"
-            )
+            msg = f"Worker {job_id} completed {trials_processed} out of {len(job_chunk)} trials"
+            worker_logger.info(msg)
 
             # Check if any trials failed
             if trials_processed < len(job_chunk):
                 failed_trials = len(job_chunk) - trials_processed
-                worker_logger.warning(
-                    f"Worker {job_id} failed to process {failed_trials} trials"
-                )
-                main_logger.warning(
-                    f"Worker {job_id} failed to process {failed_trials} trials"
-                )
+                msg = f"Worker {job_id} failed to process {failed_trials} trials"
+                worker_logger.warning(msg)
+                main_logger.warning(msg)
 
         except Exception as e:
-            worker_logger.error(f"Worker {job_id} failed with error: {e}")
-            main_logger.error(f"Worker {job_id} failed with error: {e}")
+            msg = f"Worker {job_id} failed with error: {e}"
+            worker_logger.error(msg)
+            main_logger.error(msg)
 
         # Log completion
-        worker_logger.info(f"Worker {job_id} completed processing")
-        main_logger.info(f"Worker {job_id} completed processing")
-
-        if start_idx >= NUM_GRID_POINTS:
-            worker_logger.warning(
-                f"Worker {job_id} has no trials to process (start_idx={start_idx} >= n_grid_points={NUM_GRID_POINTS})"
-            )
+        msg = f"Worker {job_id} completed processing"
+        worker_logger.info(msg)
+        main_logger.info(msg)
 
     else:
         # ==== Multi-Worker Mode ====
