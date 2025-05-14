@@ -24,22 +24,22 @@ FORMATTER = logging.Formatter(
 )
 
 # --- Optimization Parameter Definitions ---
-# All parameter ranges for grid/random search
-PARAM_SPACE_1 = {
-    "maximalDeltaPhi": [0.2, 0.4, 0.5],  # def: 0.3926990
-    "maximalLayerJump": [4, 5, 6, 7, 8],  # def: 4
-    "minimalPtRequirement": [0.0, 0.1],  # def: 0
-    "pathMaximalCandidatesInFlight": [3, 4],  # def: 3
-    "stateMaximalHitCandidates": [3, 4, 5],  # def: 4
-}
-
 # Quick test space
-PARAM_SPACE = {
+PARAM_SPACE_TEST = {
     "maximalDeltaPhi": [0.2, 0.4],
     "maximalLayerJump": [4, 5],
     "minimalPtRequirement": [0.0],
     "pathMaximalCandidatesInFlight": [3],
     "stateMaximalHitCandidates": [3, 4],
+}
+
+# All parameter ranges for grid/random search
+PARAM_SPACE = {
+    "maximalDeltaPhi": [0.2, 0.4, 0.5],  # def: 0.3926990
+    "maximalLayerJump": [4, 5, 6, 7, 8],  # def: 4
+    "minimalPtRequirement": [0.0, 0.1],  # def: 0
+    "pathMaximalCandidatesInFlight": [3, 4],  # def: 3
+    "stateMaximalHitCandidates": [3, 4, 5],  # def: 4
 }
 
 # Reference parameter set for baseline comparison
