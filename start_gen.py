@@ -23,27 +23,27 @@ main = basf2.Path()
 main.add_module("EventInfoSetter", evtNumList=[1000], expList=[0], runList=[0])
 
 # MC sample: 'mixed' (BBbar), 'charged' (B+B-), 'mu+mu-' (dimuon), 'tau+tau-'
-final_state = "mixed"
+finalstate = "mixed"
 
 # Add EvtGen generator
-if final_state in ["mixed", "charged"]:
+if finalstate in ["mixed", "charged"]:
     ge.add_evtgen_generator(
         path=main,
-        finalstate=final_state,
+        finalstate=finalstate,
         signaldecfile=None,
     )
 # Add KKMC generator
-elif final_state in ["mu+mu-", "tau+tau-"]:
+elif finalstate in ["mu+mu-", "tau+tau-"]:
     ge.add_kkmc_generator(
         path=main,
-        finalstate=final_state,
+        finalstate=finalstate,
         signalconfigfile="",
     )
 else:
-    raise ValueError(f"Unknown final_state: {final_state}.")
+    raise ValueError(f"Unknown finalstate: {finalstate}.")
 
 # Save all dataobjects
-main.add_module("RootOutput", outputFileName=f"dataset/{final_state}_gen.root")
+main.add_module("RootOutput", outputFileName=f"dataset/{finalstate}_gen.root")
 
 # Print modules in path
 # basf2.print_path(main)

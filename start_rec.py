@@ -19,8 +19,8 @@ basf2.set_random_seed(12345)
 main = basf2.Path()
 
 # Add simulated data: 'mixed', 'charged', and 'mu+mu-' samples
-final_state = "mixed"
-main.add_module("RootInput", inputFileName=f"dataset/{final_state}_sim.root")
+finalstate = "mixed"
+main.add_module("RootInput", inputFileName=f"dataset/{finalstate}_sim.root")
 
 # Add full tracking reconstuction
 tracking.add_tracking_reconstruction(
@@ -71,12 +71,12 @@ additional_br = [
 mdst.add_mdst_output(
     path=main,
     mc=True,
-    filename=f"dataset/{final_state}_mdst.root",
+    filename=f"dataset/{finalstate}_mdst.root",
     additionalBranches=additional_br,
 )
 
 # Save all dataobjects
-# main.add_module("RootOutput", outputFileName=f"dataset/{final_state}_reco.root")
+# main.add_module("RootOutput", outputFileName=f"dataset/{finalstate}_reco.root")
 
 # Print modules in path
 # basf2.print_path(main)

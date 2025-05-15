@@ -48,10 +48,10 @@ metrics = TrackingMetrics(params, finalstate, filename="metrics.csv")
 main.add_module(metrics)
 
 # Save mDST dataobjects (not required for search)
-# mdst.add_mdst_output(main, mc=True, filename=f"{dataset/{final_state}_mds.root")
+# mdst.add_mdst_output(main, mc=True, filename=f"{dataset/{finalstate}_mds.root")
 
 # Save all dataobjects (not required for search)
-# main.add_module("RootOutput", outputFileName=f"dataset/{final_state}_reco.root")
+# main.add_module("RootOutput", outputFileName=f"dataset/{finalstate}_reco.root")
 
 basf2.process(main)
 # print(basf2.statistics)
