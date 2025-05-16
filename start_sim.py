@@ -8,6 +8,13 @@
 # This file is licensed under LGPL-3.0, see LICENSE.md.                  #
 ##########################################################################
 
+"""
+Run-independent (MC16ri) | Run-dependent (MC16rd)
+- simulated background   | - background overlay from data
+- exp 0 = nominal lumi   | - realistic detector conditions
+- exp 1003 = pre-LS1     | - produced with release-08-02 (Run 1)
+- exp 1004 = pre-LS2     | - produced with release-08-03 (Run 2)
+"""
 
 import background
 import basf2
