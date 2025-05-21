@@ -43,9 +43,9 @@ done
 # --tol: convergence tolerance
 # --workers: number of CPU cores to use
 # --seed: random seed for reproducibility
-python3 run_scipy_rand.py \
+python3 run_rand.py \
     --max-trials "${MAX_TRIALS}" \
     --tol "${TOL}" \
     --workers "${WORKERS}" \
     --seed "${SEED}" \
-    2>&1 | tee logs/random_local.log
+    2>&1 | tee logs/rand_local.log

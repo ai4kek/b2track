@@ -54,7 +54,7 @@ if [[ $USE_TASKSET -eq 1 ]]; then
     taskset -c 0-$((WORKERS-1)) python3 run_scipy_grid.py --workers "${WORKERS}" 2>&1 | tee logs/grid_local.log
 else
     # Run without CPU affinity restrictions
-    python3 run_scipy_grid.py --workers "${WORKERS}" 2>&1 | tee logs/grid_local.log
+    python3 run_grid.py --workers "${WORKERS}" 2>&1 | tee logs/grid_local.log
 fi
 
 echo "Job finished on $(date)"
