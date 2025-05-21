@@ -123,15 +123,15 @@ def main():
     basf2.set_module_parameters(main, name="ToCDCCKF", recursive=True, **params)
 
     # Calculate tracking metrics
-    metrics = TrackMetrics(params, args.finalstate, filename=args.metrics)
-    evaluate = TrackEvaluation(params, args.finalstate, filename=args.metrics)
+    # metrics = TrackMetrics(params, args.finalstate, filename=args.metrics)
+    metrics = TrackEvaluation(params, args.finalstate, filename=args.metrics)
     main.add_module(metrics)
 
     # Save mDST dataobjects (not required for search)
     # mdst.add_mdst_output(main, mc=True, filename=f"dataset/{finalstate}_mdst_svd.root")
 
     # Save all dataobjects (not required for search)
-    # main.add_module("RootOutput", outputFileName=f"dataset/{finalstate}_reco.root")
+    # main.add_module("RootOutput", outputFileName=f"dataset/{finalstate}_reco_svd.root")
 
     basf2.process(main)
     # print(basf2.statistics)
