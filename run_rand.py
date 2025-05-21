@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 # FIXME: Random Search script is far behind the Grid Search one. At some point,
-# I refactor it in similar manner as the grid search script. I am leaving it 
+# I refactor it in similar manner as the grid search script. I am leaving it
 # for the sake of completeness, and a testbed for future development.
 
 import argparse

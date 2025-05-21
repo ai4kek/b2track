@@ -18,7 +18,8 @@ import basf2
 import svd
 from tracking.path_utils import add_mc_matcher, add_vxd_track_finding_vxdtf2
 
-from src.tracking_metrics import TrackMetrics as TrackingMetrics
+from src.tracking_evalution import TrackEvaluation
+from src.tracking_metrics import TrackMetrics
 
 
 def parse_args():
@@ -67,12 +68,12 @@ def main():
     # Steering Path
     main = basf2.Path()
 
+    # Add modules
     main.add_module("RootInput", inputFileName=args.input)
-
     main.add_module("Gearbox")
     main.add_module("Geometry")
 
-    # SVD-only Tracking with ToCDCCKF
+    # SVD-only Tracking
     main.add_module("SetupGenfitExtrapolation", energyLossBrems=False, noiseBrems=False)
 
     svd.add_svd_reconstruction(main)
@@ -85,6 +86,8 @@ def main():
         useSecondHits=False,
         flightTimeEstimation="outwards",
     )
+
+    # ToCDCCKF module
     main.add_module(
         "ToCDCCKF",
         inputWireHits="CDCWireHitVector",
@@ -107,7 +110,6 @@ def main():
     )
 
     main.add_module("DAFRecoFitter", recoTracksStoreArrayName="RecoTracks")
-
     main.add_module("TrackCreator", recoTrackColName="RecoTracks")
 
     # Adding MCMatcher after TrackCreator
@@ -121,7 +123,8 @@ def main():
     basf2.set_module_parameters(main, name="ToCDCCKF", recursive=True, **params)
 
     # Calculate tracking metrics
-    metrics = TrackingMetrics(params, args.finalstate, filename=args.metrics)
+    metrics = TrackMetrics(params, args.finalstate, filename=args.metrics)
+    evaluate = TrackEvaluate(params, args.finalstate, filename=args.metrics)
     main.add_module(metrics)
 
     # Save mDST dataobjects (not required for search)

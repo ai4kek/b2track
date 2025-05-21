@@ -16,42 +16,88 @@ import json
 import basf2
 import tracking
 
-from src.tracking_metrics import TrackMetrics as TrackingMetrics
+from src.tracking_evalution import TrackEvaluation
+from src.tracking_metrics import TrackMetrics
 
-# Reproducibility
-basf2.set_random_seed(12345)
 
-# Steering Path
-main = basf2.Path()
+def parse_args():
+    parser = argparse.ArgumentParser(
+        description="Run SVD tracking with specified parameters"
+    )
+    parser.add_argument(
+        "--input",
+        type=str,
+        default="dataset/mixed_sim.root",
+        help="Input ROOT file path (default: dataset/mixed_sim.root)",
+    )
+    parser.add_argument(
+        "--finalstate",
+        type=str,
+        default="mixed",
+        help="Final state type (default: mixed)",
+    )
+    parser.add_argument(
+        "--params",
+        type=str,
+        default="params.json",
+        help="Input parameters JSON file (default: params.json)",
+    )
+    parser.add_argument(
+        "--metrics",
+        type=str,
+        default="metrics.csv",
+        help="Output metrics CSV file (default: metrics.csv)",
+    )
 
-finalstate = "mixed"
-main.add_module("RootInput", inputFileName=f"dataset/{finalstate}_sim.root")
+    # Handle both direct python and basf2 argument passing
+    try:
+        return parser.parse_args()
+    except SystemExit:
+        # If parsing fails (when run with python directly), return default values
+        return parser.parse_args([])
 
-# Add full tracking reconstuction
-tracking.add_tracking_reconstruction(
-    path=main,
-    components=None,
-    pruneTracks=False,
-    mcTrackFinding=False,
-    skipGeometryAdding=False,
-)
 
-# Load ToCDCCKF parameter set
-with open("params.json", "r") as f:
-    params = json.load(f)
+def main():
+    args = parse_args()
 
-# Inject parameters into ToCDCCKF
-basf2.set_module_parameters(main, name="ToCDCCKF", recursive=True, **params)
+    # Reproducibility
+    basf2.set_random_seed(12345)
 
-# Calculate tracking metrics
-metrics = TrackingMetrics(params, finalstate, filename="metrics.csv")
-main.add_module(metrics)
+    # Steering Path
+    main = basf2.Path()
 
-# Save mDST dataobjects (not required for search)
-# mdst.add_mdst_output(main, mc=True, filename=f"{dataset/{finalstate}_mds.root")
+    main.add_module("RootInput", inputFileName=args.input)
 
-# Save all dataobjects (not required for search)
-# main.add_module("RootOutput", outputFileName=f"dataset/{finalstate}_reco.root")
+    # Add full tracking reconstuction
+    tracking.add_tracking_reconstruction(
+        path=main,
+        components=None,
+        pruneTracks=False,
+        mcTrackFinding=False,
+        skipGeometryAdding=False,
+    )
 
-basf2.process(main)
-# print(basf2.statistics)
+    # Load ToCDCCKF parameter set
+    with open(args.params, "r") as f:
+        params = json.load(f)
+
+    # Inject parameters into ToCDCCKF
+    basf2.set_module_parameters(main, name="ToCDCCKF", recursive=True, **params)
+
+    # Calculate tracking metrics
+    metrics = TrackMetrics(params, args.finalstate, filename=args.metrics)
+    evaluate = TrackEvaluate(params, args.finalstate, filename=args.metrics)
+    main.add_module(metrics)
+
+    # Save mDST dataobjects (not required for search)
+    # mdst.add_mdst_output(main, mc=True, filename=f"dataset/{finalstate}_mdst_svd.root")
+
+    # Save all dataobjects (not required for search)
+    # main.add_module("RootOutput", outputFileName=f"dataset/{finalstate}_reco.root")
+
+    basf2.process(main)
+    # print(basf2.statistics)
+
+
+if __name__ == "__main__":
+    main()
