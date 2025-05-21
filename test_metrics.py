@@ -21,7 +21,7 @@ basf2.set_random_seed(12345)
 main = basf2.Path()
 
 finalstate = "mixed"
-main.add_module("RootInput", inputFileName=f"dataset/{finalstate}_reco.root")
+main.add_module("RootInput", inputFileName=f"dataset/{finalstate}_rec.root")
 
 # Dummy ToCDCCKF params
 params = {"trial": 1, "param1": 1.0, "param2": 0.25, "myTag": "experimentA"}

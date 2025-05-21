@@ -124,7 +124,7 @@ def main():
 
     # Calculate tracking metrics
     metrics = TrackMetrics(params, args.finalstate, filename=args.metrics)
-    evaluate = TrackEvaluate(params, args.finalstate, filename=args.metrics)
+    evaluate = TrackEvaluation(params, args.finalstate, filename=args.metrics)
     main.add_module(metrics)
 
     # Save mDST dataobjects (not required for search)

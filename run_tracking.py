@@ -11,6 +11,7 @@
 # Intended to run with a dispatcher script as a subprocess for different
 # trails with specific params. For simple tracking, run the start_rec.py.
 
+import argparse
 import json
 
 import basf2
@@ -86,7 +87,7 @@ def main():
 
     # Calculate tracking metrics
     metrics = TrackMetrics(params, args.finalstate, filename=args.metrics)
-    evaluate = TrackEvaluate(params, args.finalstate, filename=args.metrics)
+    evaluate = TrackEvaluation(params, args.finalstate, filename=args.metrics)
     main.add_module(metrics)
 
     # Save mDST dataobjects (not required for search)
