@@ -11,7 +11,8 @@
 
 import basf2
 
-from src.tracking_metrics import TrackMetrics  # non-verbosed
+from src.tracking_evalution import TrackEvaluation
+from src.tracking_metrics import TrackMetrics
 
 # Reproducibility
 basf2.set_random_seed(12345)
@@ -20,13 +21,13 @@ basf2.set_random_seed(12345)
 main = basf2.Path()
 
 finalstate = "mixed"
-main.add_module("RootInput", inputFileName=f"dataset/{finalstate}_mdst_svd.root")
+main.add_module("RootInput", inputFileName=f"dataset/{finalstate}_reco.root")
 
 # Dummy ToCDCCKF params
 params = {"trial": 1, "param1": 1.0, "param2": 0.25, "myTag": "experimentA"}
 
 # Tracking Metrics
-# metrics = TrackingMetrics(params, final_state, filename="test.csv")
-metrics = TrackMetrics(params, finalstate, filename="test.csv")
-main.add_module(metrics)
+# metrics = TrackMetrics(params, finalstate, filename="test.csv")
+evaluate = TrackEvaluation(params, finalstate, filename="test.csv")
+main.add_module(evaluate)
 basf2.process(main)

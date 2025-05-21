@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
 
+# FIXME: Random Search script is far behind the Grid Search one. At some point,
+# I refactor it in similar manner as the grid search script. I am leaving it 
+# for the sake of completeness, and a testbed for future development.
+
 import argparse
 import csv
 import hashlib
@@ -14,7 +18,7 @@ from pathlib import Path
 
 from scipy.optimize import differential_evolution
 
-from src.scipy_opt_utils import (
+from src.optimization_utils import (
     MAX_TRIALS,
     METRICS_FIELDS,
     PARAM_SPACE,

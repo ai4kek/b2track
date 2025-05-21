@@ -8,8 +8,8 @@
 # This file is licensed under LGPL-3.0, see LICENSE.md.                  #
 ##########################################################################
 
-# Intended to run with run_search.py script as a subprocess for different
-# trails with specific params. For just tracking, run the start_rec.py.
+# Intended to run with a dispatcher script as a subprocess for different
+# trails with specific params. For simple tracking, run the start_rec.py.
 
 import argparse
 import json

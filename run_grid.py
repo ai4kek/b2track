@@ -30,7 +30,7 @@ import json
 import os
 from multiprocessing import Pool
 
-from src.scipy_opt_utils import (
+from src.optimization_utils import (
     PARAM_SPACE,
     get_main_logger,
     get_worker_file_path,

@@ -13,5 +13,5 @@ echo "tracking_performance.py script executed successfully..."
 
 # generate validation metrics
 echo "generating validation metrics..."
-basf2 tracking_metrics.py -- -f1 "${sample}/${sample}_ntuple.root" -p1 "$sample"
-echo "tracking_metrics.py script executed successfully..."
+basf2 tracking_validation.py -- -f1 "${sample}/${sample}_ntuple.root" -p1 "$sample"
+echo "tracking_validation.py script executed successfully..."

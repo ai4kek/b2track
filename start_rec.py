@@ -76,7 +76,7 @@ mdst.add_mdst_output(
 )
 
 # Save all dataobjects
-# main.add_module("RootOutput", outputFileName=f"dataset/{finalstate}_reco.root")
+# main.add_module("RootOutput", outputFileName=f"dataset/{finalstate}_rec.root")
 
 # Print modules in path
 # basf2.print_path(main)

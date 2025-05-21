@@ -12,9 +12,8 @@ from pathlib import Path
 
 import pandas as pd
 
-# Import utilities from src.scipy_opt_utils
-from src.scipy_opt_utils import METRICS_FIELDS
-from src.scipy_plot_utils import (
+from src.optimization_utils import METRICS_FIELDS
+from src.plotting_utils import (
     ParameterPlotter,
     extract_best_results,
     extract_reference_results,
