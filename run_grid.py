@@ -6,15 +6,15 @@ This script performs a grid search over tracking parameters to optimize F1 score
 It supports three execution modes:
 
 1. Single Worker Mode:
-   python3 run_scipy_grid.py
+   python3 run_grid.py
 
 2. Multi-Worker Mode (local parallel processing):
    python3 run_scipy_grid.py --workers <N>
-   Example: python3 run_scipy_grid.py --workers 4
+   Example: python3 run_grid.py --workers 4
 
 3. LSF Cluster Mode:
-   bsub -J "grid[1-<N>]" python3 run_scipy_grid.py --cluster
-   Example: bsub -J "grid[1-5]" python3 run_scipy_grid.py --cluster
+   bsub -J "grid[1-<N>]" python3 run_grid.py --cluster
+   Example: bsub -J "grid[1-5]" python3 run_grid.py --cluster
    
    Note: Must be run as an LSF job array. The script uses LSB_JOBINDEX and
    LSB_JOBINDEX_END environment variables to distribute work across workers.
