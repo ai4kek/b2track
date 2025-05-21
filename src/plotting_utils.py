@@ -16,7 +16,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
 
-from src.scipy_opt_utils import REF_PARAM
+from src.optimization_utils import REF_PARAM
 
 # Set Matplotlib style for better visualization
 plt.style.use("seaborn-v0_8-darkgrid")
