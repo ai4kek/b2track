@@ -22,9 +22,6 @@ from src.plotting_utils import (
     plot_efficiency_vs_purity_time,
 )
 
-# Set Matplotlib style for better visualization
-# plt.style.use("seaborn-v0_8-darkgrid")
-
 # Configure logging
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"

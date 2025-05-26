@@ -32,7 +32,7 @@ import simulation as si
 
 def parse_args():
     parser = argparse.ArgumentParser(
-        description="Run SVD tracking with specified parameters"
+        description="Run-independent MC (MC16ri-like)."
     )
     parser.add_argument(
         "--finalstate",

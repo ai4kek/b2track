@@ -195,7 +195,7 @@ def plot_efficiency_vs_purity_f1(df, best_results=None, ref_results=None):
     fig, ax = plt.subplots(figsize=(10, 8))
 
     norm = plt.Normalize(plot_df["f1"].min(), plot_df["f1"].max())
-    cmap = plt.get_cmap("viridis")
+    cmap = plt.get_cmap("plasma")
 
     sc = ax.scatter(
         plot_df["efficiency"],
@@ -286,7 +286,7 @@ def plot_efficiency_vs_purity_time(df, best_results=None, ref_results=None):
     norm = plt.Normalize(
         plot_df["execution_time"].min(), plot_df["execution_time"].max()
     )
-    cmap = plt.get_cmap("viridis")
+    cmap = plt.get_cmap("plasma")
 
     sc = ax.scatter(
         plot_df["efficiency"],
@@ -400,7 +400,7 @@ class ParameterPlotter:
                             pivot,
                             annot=True,
                             fmt=".3f",
-                            cmap="viridis",
+                            cmap="plasma",
                             cbar_kws={"label": "F1 score"},
                             linewidths=0.5,
                             square=True,
