@@ -70,7 +70,7 @@ def main():
     ge.add_evtgen_generator(path=main, finalstate="mixed", eventType="mixed")
 
     # detector simulation
-    si.add_simulation(main, bkgfiles=bg)
+    si.add_simulation(main, bkgfiles=bg_local)
 
     # reconstruction
     # re.add_reconstruction(main)
@@ -84,11 +84,11 @@ def main():
     )
 
     # Print modules in path
-    # basf2.print_path(main)
+    # b2.print_path(main)
 
     # Run event loop
-    basf2.process(main)
-    # print(basf2.statistics)
+    b2.process(main)
+    # print(b2.statistics)
 
 
 if __name__ == "__main__":

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#BSUB -J mjob                        # Job name, for job array "mjob[1-10]"
+#BSUB -J main                        # Job name, for job array "main[1-10]"
 #BSUB -P aakram                      # Account name (project ID)
 #BSUB -G b2_belle2                   # Group for accounting purposes
 #BSUB -n 8                           # Number of cores (total across all nodes)
