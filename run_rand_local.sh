@@ -4,7 +4,7 @@
 mkdir -p logs
 
 # Load Belle II software
-source /cvmfs/belle.cern.ch/tools/b2setup release-09-00-00
+source /cvmfs/belle.cern.ch/tools/b2setup release-08-03-00
 
 # Default values
 MAX_TRIALS=20

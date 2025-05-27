@@ -14,7 +14,7 @@
 #BSUB -N                              # Send email at job completion
 
 mkdir -p logs
-source /cvmfs/belle.cern.ch/tools/b2setup release-09-00-00
+source /cvmfs/belle.cern.ch/tools/b2setup release-08-03-00
 
 echo "Running grid search job $LSB_JOBID on $(hostname)"
 echo "Running job array index: $LSB_JOBINDEX of $LSB_JOBINDEX_END"

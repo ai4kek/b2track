@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # init basf2
-source /cvmfs/belle.cern.ch/tools/b2setup release-09-00-00
+source /cvmfs/belle.cern.ch/tools/b2setup release-08-03-00
 
 # sample name
 sample=mixed
