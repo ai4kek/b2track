@@ -46,37 +46,55 @@ def parse_args():
 def main():
     args = parse_args()
 
-    # set database conditions (in addition to default)
+    # Set seed for reproducibility
+    b2.set_random_seed(12345)
+
+    # Set database conditions (in addition to default)
     b2.conditions.override_globaltags()
     b2.conditions.append_globaltag("mcrd_prompt_rel08")
     b2.conditions.append_globaltag("data_prompt_rel08")
     b2.conditions.append_globaltag("online")
 
+    # Steering Path
+    main = b2.create_path()
+
+    # Set event info
+    main.add_module(
+        "EventInfoSetter", evtNumList=[131385], expList=[35], runList=[1749]
+    )
+
+    # Events generator
+    if args.finalstate in ["mixed", "charged"]:
+        ge.add_evtgen_generator(  # Add EvtGen generator
+            path=main,
+            finalstate=args.finalstate,
+            signaldecfile=None,
+        )
+    elif args.finalstate in ["mu+mu-", "tau+tau-"]:
+        ge.add_kkmc_generator(  # Add KKMC generator
+            path=main,
+            finalstate=args.finalstate,
+            signalconfigfile="",
+        )
+    else:
+        raise ValueError(f"Unknown finalstate: {args.finalstate}.")
+
+    # Add Background
     # background (collision) files
     bg = glob.glob("./*.root")
 
     # if running locally e.g. on KEKCC/NAF clusters
     bg_local = glob.glob(
-        "/group/belle2/dataprod/BGOverlay/BGOrd/rel8/BGOExp35rel8/release-08-02-05/e0035/4S/r*/beambg/sub*/*"
+        "/group/belle2/dataprod/BGOverlay/BGOrd/rel8/BGOExp35rel8/release-08-02-05/e0035/4S/r01749/beambg/sub*/*"
     )
 
-    # create path
-    main = b2.create_path()
-
-    # specify number of events to be generated
-    main.add_module("EventInfoSetter", expList=35, runList=1749, evtNumList=131385)
-
-    # events generator
-    ge.add_evtgen_generator(path=main, finalstate="mixed", eventType="mixed")
-
-    # detector simulation
-    si.add_simulation(main, bkgfiles=bg_local)
-
-    # reconstruction
-    # re.add_reconstruction(main)
-
-    # Finally add mdst output
-    # mdst.add_mdst_output(main, additionalBranches=['EventExtraInfo'], filename="mdst.root")
+    # Add simulation
+    si.add_simulation(
+        path=main,
+        components=None,
+        bkgfiles=bg_local,
+        bkgOverlay=True,
+    )
 
     # Save all dataobjects
     main.add_module(
