@@ -27,8 +27,12 @@ Output:
 import argparse
 import itertools
 import json
+import logging
 import os
+import sys
 from multiprocessing import Pool
+
+import numpy as np
 
 from src.optimization_utils import (
     PARAM_SPACE,
@@ -170,12 +174,12 @@ def main():
     parser.add_argument(
         "--workers",
         type=int,
-        help="Number of parallel workers.",
+        help="Number of workers for local multiprocessing mode",
     )
     parser.add_argument(
-        "--cluster",
-        action="store_true",
-        help="Run in LSF cluster mode",
+        "--arrays",
+        type=int,
+        help="Number of jobs in the job array for cluster mode",
     )
     args = parser.parse_args()
 
@@ -186,17 +190,26 @@ def main():
         main_logger.info(f"  {param}: {len(values)} values = {values}")
 
     # ==== Cluster Mode ====
-    if args.cluster:
-
-        # Get LSF job array information
-        if "LSB_JOBINDEX" not in os.environ or "LSB_JOBINDEX_END" not in os.environ:
-            raise RuntimeError(
-                "LSF environment variables not found. Must run as LSF job array."
-            )
+    # Detect if running in LSF cluster environment by checking for LSB_JOBINDEX
+    if "LSB_JOBINDEX" in os.environ:
 
         # LSF uses 1-based indexing for job arrays
         job_id = int(os.environ["LSB_JOBINDEX"])  # Current job index (1-based)
-        n_jobs = int(os.environ["LSB_JOBINDEX_END"])  # Total number of jobs
+
+        # In cluster mode, --arrays must be specified
+        if args.arrays is None:
+            main_logger.error("Error: --arrays parameter is required for cluster mode")
+            main_logger.error("Please specify the total number of jobs in the array")
+            sys.exit(1)
+
+        # Use the user-specified total number of jobs
+        n_total_workers = args.arrays
+        main_logger.info(
+            f"Cluster mode: Using {n_total_workers} total jobs for chunk calculation"
+        )
+
+        # Get the actual number of jobs in the current submission for logging
+        n_jobs = int(os.environ.get("LSB_JOBINDEX_END", 1))
 
         # Get worker logger for status updates
         worker_logger = get_worker_logger(job_id)
@@ -214,9 +227,10 @@ def main():
         # LSF job_id is already 1-based, use it directly
         worker_id = job_id  # 1-based worker ID
 
-        # Calculate base chunk size and remainder
-        base_chunk_size = NUM_GRID_POINTS // n_jobs
-        remainder = NUM_GRID_POINTS % n_jobs
+        # Calculate base chunk size and remainder based on the total number of workers
+        # This ensures each worker gets the same chunk regardless of resubmission
+        base_chunk_size = NUM_GRID_POINTS // n_total_workers
+        remainder = NUM_GRID_POINTS % n_total_workers
 
         # Calculate this worker's exact chunk boundaries
         # Workers 1 to remainder get one extra trial each
@@ -225,7 +239,10 @@ def main():
 
         # Log distribution details in main logger
         main_logger.info(
-            f"Distribution strategy for {NUM_GRID_POINTS} trials across {n_jobs} workers:"
+            f"Distribution strategy for {NUM_GRID_POINTS} trials across {n_total_workers} total workers:"
+        )
+        main_logger.info(
+            f"Current job is worker {job_id} of {n_jobs} in this submission"
         )
         main_logger.info(f"  - Base chunk size: {base_chunk_size} trials per worker")
         if remainder > 0:
@@ -288,12 +305,24 @@ def main():
         main_logger.info(msg)
 
     else:
-        # ==== Multi-Worker Mode ====
-        if args.workers is not None and args.workers > 1:
-            main_logger.info(f"Grid Search with {args.workers} Local Workers")
+        # ==== Local Mode ====
+        # In local mode, --workers must be specified for multi-worker mode
+        if args.workers is None:
+            # Default to single worker if not specified
+            args.workers = 1
+            main_logger.info(
+                "No worker count specified, defaulting to single worker mode"
+            )
+
+        # Multi-worker mode if workers > 1
+        if args.workers > 1:
+            main_logger.info(f"Local multi-worker mode: Using {args.workers} workers")
             main_logger.info(
                 f"Starting {args.workers} workers for distributed processing"
             )
+
+            # In local mode, --workers determines the total number of workers
+            n_total_workers = args.workers
 
             # Calculate base chunk size and remainder for even distribution
             base_chunk_size = NUM_GRID_POINTS // args.workers

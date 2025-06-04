@@ -31,9 +31,7 @@ import simulation as si
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(
-        description="Run-independent MC (MC16ri-like)."
-    )
+    parser = argparse.ArgumentParser(description="Run-independent MC (MC16ri-like).")
     parser.add_argument(
         "--finalstate",
         type=str,

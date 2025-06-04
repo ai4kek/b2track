@@ -20,5 +20,5 @@ echo "Running grid search job $LSB_JOBID on $(hostname)"
 echo "Running job array index: $LSB_JOBINDEX of $LSB_JOBINDEX_END"
 
 echo "Job started on $(date)"
-python3 run_grid.py --cluster
+python3 run_grid.py --arrays 10
 echo "Job finished on $(date)"
