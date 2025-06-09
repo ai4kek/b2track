@@ -60,7 +60,7 @@ def main():
 
     # Set event info
     main.add_module(
-        "EventInfoSetter", evtNumList=[131385], expList=[35], runList=[1749]
+        "EventInfoSetter", evtNumList=[9528], expList=[35], runList=[1853]
     )
 
     # Events generator
@@ -85,7 +85,7 @@ def main():
 
     # if running locally e.g. on KEKCC/NAF clusters
     bg_local = glob.glob(
-        "/group/belle2/dataprod/BGOverlay/BGOrd/rel8/BGOExp35rel8/release-08-02-05/e0035/4S/r01749/beambg/sub*/*"
+        "/group/belle2/dataprod/BGOverlay/BGOrd/rel8/BGOExp35rel8/release-08-02-05/e0035/4S/r01853/beambg/sub*/*"
     )
 
     # Add simulation
