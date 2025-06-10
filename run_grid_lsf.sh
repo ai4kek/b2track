@@ -23,7 +23,3 @@ echo "Job started on $(date)"
 python3 run_grid.py --arrays 180
 echo "Job finished on $(date)"
 
-# Memory stats
-echo "Memory stats for job ${LSB_JOBID}" >> ${LSB_JOBID}_mem_usage.log
-cat /proc/${LSB_JOBPID}/status | grep -E "VmPeak|VmHWM" >> ${LSB_JOBID}_mem_usage.log
-
