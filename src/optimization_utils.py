@@ -260,21 +260,12 @@ def run_tracking_with_params(
 
             # Run the tracking command (stdout/stderr go to cluster job files)
             subprocess.run(
-                cmd_str,
-                shell=True,
-                check=True,  # This will raise an exception if the command fails
-                timeout=3600,  # 1 hour timeout
+                cmd_str,  # command to run
+                shell=True,  # run as shell command
+                check=True,  # raise an exception if the command fails
             )
             elapsed = time.time() - start
             return elapsed
-        except subprocess.TimeoutExpired:
-            main_logger.error(
-                f"Worker {worker_id}, Trial {trial_number}: Tracking command timed out after 1 hour"
-            )
-            if attempt < max_retries - 1:
-                main_logger.info(f"Retrying... (attempt {attempt + 1}/{max_retries})")
-                time.sleep(5)  # Wait before retry
-                continue
         except Exception as e:
             main_logger.error(
                 f"Worker {worker_id}, Trial {trial_number}: Tracking command failed: {e}"
