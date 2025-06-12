@@ -63,7 +63,7 @@ def main():
 
     # MCri settings, chose exp number 0/1003/1004 and run number 0. For MCrd, use
     # exp number 35 and any run number after 1500, it requires a special payload.
-    main.add_module("EventInfoSetter", evtNumList=[1000], expList=[0], runList=[0])
+    main.add_module("EventInfoSetter", evtNumList=[9528], expList=[0], runList=[0])
 
     # MC sample: 'mixed' (BBbar), 'charged' (B+B-), 'mu+mu-' (dimuon), 'tau+tau-'
 
