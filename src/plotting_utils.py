@@ -19,7 +19,7 @@ import seaborn as sns
 from src.optimization_utils import REF_PARAM
 
 # Set Matplotlib style for better visualization
-plt.style.use("seaborn-v0_8-darkgrid")
+# plt.style.use("seaborn-v0_8-darkgrid")
 
 # Configure logging
 logging.basicConfig(
@@ -254,7 +254,7 @@ def plot_efficiency_vs_purity_f1(df, best_results=None, ref_results=None):
             color="blue",
         )
 
-    ax.set_title("Tracking Efficiency vs Purity (F1 Score)")
+    ax.set_title("Hit Efficiency vs Hit Purity (F1 Score)")
     ax.set_xlabel("Efficiency")
     ax.set_ylabel("Purity")
     ax.grid(True, alpha=0.3)
@@ -346,7 +346,7 @@ def plot_efficiency_vs_purity_time(df, best_results=None, ref_results=None):
             color="blue",
         )
 
-    ax.set_title("Tracking Efficiency vs Purity (Execution Time)")
+    ax.set_title("Hit Efficiency vs Hit Purity (Execution Time)")
     ax.set_xlabel("Efficiency")
     ax.set_ylabel("Purity")
     ax.grid(True, alpha=0.3)
