@@ -9,7 +9,7 @@
 ##########################################################################
 
 # Intended to run with a dispatcher script as a subprocess for different
-# trails with specific params. For simple tracking, run the start_rec.py.
+# trials with specific params. For simple tracking, run the start_rec.py.
 
 import argparse
 import json

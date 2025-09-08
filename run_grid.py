@@ -15,7 +15,7 @@ It supports three execution modes:
 3. LSF Cluster Mode:
    bsub -J "grid[1-<N>]" python3 run_grid.py --cluster
    Example: bsub -J "grid[1-5]" python3 run_grid.py --cluster
-   
+
    Note: Must be run as an LSF job array. The script uses LSB_JOBINDEX and
    LSB_JOBINDEX_END environment variables to distribute work across workers.
 

@@ -59,9 +59,7 @@ def main():
     main = b2.create_path()
 
     # Set event info
-    main.add_module(
-        "EventInfoSetter", evtNumList=[9528], expList=[35], runList=[1853]
-    )
+    main.add_module("EventInfoSetter", evtNumList=[9528], expList=[35], runList=[1853])
 
     # Events generator
     if args.finalstate in ["mixed", "charged"]:
