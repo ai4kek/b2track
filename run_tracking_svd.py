@@ -68,12 +68,13 @@ def main():
     # Steering Path
     main = basf2.Path()
 
-    # Add modules
+    # Add RootInput to load simulated data
     main.add_module("RootInput", inputFileName=args.input)
+
+    # SVD-only Tracking (see run_tracking.py for full tracking)
     main.add_module("Gearbox")
     main.add_module("Geometry")
 
-    # SVD-only Tracking
     main.add_module("SetupGenfitExtrapolation", energyLossBrems=False, noiseBrems=False)
 
     svd.add_svd_reconstruction(main)

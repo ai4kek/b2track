@@ -2,51 +2,70 @@
 
 Playground for Belle II Tracking.
 
+## _`basf2` Track Reconstruction_
+
+The tracking reconstruction workflow is as follows:
+
+1. _`start_gen.py`_: Run generators (_`gen.root`_)
+2. _`start_mcri.py`_, or _`start_mcrd.py`_: Run simulation (_`sim.root`_)
+3. _`start_rec.py`_: Run tracking reconstruction (_`rec.root`_ or _`mdst.root`_)
+
+In reality, most of the time we combine 1 and 2 into one step. One can run all steps in one go by running _`start_all.sh`_:
+
+
+```shell
+#!/bin/bash
+
+# from local cvmfs
+source /cvmfs/belle.cern.ch/tools/b2setup release-08-03-00
+
+# run generator
+basf2 start_gen.py > "dataset/start_gen.log" 2>&1
+echo "start_gen.py script executed successfully..."
+
+# run simulation
+basf2 start_sim.py > "dataset/start_sim.log" 2>&1
+echo "start_sim.py script executed successfully..."
+
+# run reconstruction
+basf2 start_rec.py > "dataset/start_rec.log" 2>&1
+echo "start_rec.py script executed successfully..."
+```
+
+If no arguments are provided (_`argparse`_), then all scripts will use the default values. To see how to inject ToCDCCKF parameters, see the _`run_tracking.py`_ or _`run_tracking_svd.py`_ scripts.
+
+
+## _`basf2` Track Validation_
+
+Once we have the best parameters, we can validate them by runing full tracking chain with the best parameters. For this purpose, all we need is a simulation file e.g. `mixed_sim.root` and run full tracking chain with the original parameters and the optimized parameters. In the  end we can run analysis-level validation to get tracking efficiency and purity metrics.
+
+
+- run simulation
+- run full tracking chain with original parameters
+- run track validation
+- compare mertrics for original and optimized parameters
+
+
+
+
+
+
+
+
+
+
 ## _`basf2` Workflow_
 
 There are three steps:
 
-- _`Event Generation` (EvtGen, Particle Gun, etc)_
+- _`Event Generation` (EvtGen, KKMC, Particle Gun, etc)_
 - _`Detector Simulation` (Particle Interactions + Signal Digitization)_
 - _`Reconstruction` (Tracks + Clusters)_
 
-There are two ways to create a steering file: direct, and indirect.
+There are two ways to create a steering files based on adding modules directly, or indirectly:
 
 - _Direct: `main = basf2.Path`, `main.add_module()` or `basf2.some_module (path=main)`, `basf2.Process()`, etc._
 - _Indirect: `module = basf2.register_module("Moduel Name")`, `module.Param("Param Name", "Values")`, `main = basf2.create_path()`, `main.add_module(module)`, `basf2.Process()`, etc._
-
-
-### _`basf2` Development_
-
-```shell
-# create feature branch from main
-git branch -b feature/227-improve-svd-to-cdc-ckf
-
-# setup upstream
-git push --set-upstream origin feature/227-improve-svd-to-cdc-ckf
-
-# switch to your branch
-git checkout feature/227-improve-svd-to-cdc-ckf
-
-# rebase with main
-git fetch --all && git merge origin/main
-
-# push to remote
-git push
-```
-
-## _`b2display` Path Settings_
-
-```bash
-# fix for evtdisplay
-export LD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu:$LD_LIBRARY_PATH
-```
-
-## _Service Task_
-
-- improve the SVD to CDC CKF in terms of efficiency and purity
-- investigate how to improve the SVD to CDC CKF so that one can recover inefficiencies in the CDC track finding, caused by hardware issues in the readout of the CDC.
-- [Tracking GitLab issue #227](https://gitlab.desy.de/belle2/software/tracking/issues/-/issues/227)
 
 
 ## _`basf2` Reconstruction Flow_
@@ -112,55 +131,32 @@ Main tracking functions as part of reconstruction task comes from the top-level 
 | add_cr_tracking_reconstruction()  # Cosmic Tracking
 ```
 
-The difference between `add_reconstruction()` and `add_tracking_reconstruction()` is only additional modules to calculate the software trigger cuts which are added in the `add_reconstruction()`. So for track reconstruction only, one can simply use `add_tracking_reconstruction()`. For example,
+The difference between _`add_reconstruction()`_ and _`add_tracking_reconstruction()`_ is only additional modules to calculate the software trigger cuts which are added in the _`add_reconstruction()`_. So for track reconstruction only, one can simply use _`add_tracking_reconstruction()`_.
+
+
+## _`basf2` Development_
 
 ```shell
-#!/usr/bin/env python3
+# create feature branch from main
+git branch -b feature/227-improve-svd-to-cdc-ckf
 
-##########################################################################
-# basf2 (Belle II Analysis Software Framework)                           #
-# Author: The Belle II Collaboration                                     #
-#                                                                        #
-# See git log for contributors and copyright holders.                    #
-# This file is licensed under LGPL-3.0, see LICENSE.md.                  #
-##########################################################################
+# setup upstream
+git push --set-upstream origin feature/227-improve-svd-to-cdc-ckf
 
-import basf2 as b2
-import generators as ge
-import mdst
-import reconstruction as re
-import simulation as si
-import tracking as trkx
+# switch to your branch
+git checkout feature/227-improve-svd-to-cdc-ckf
+
+# rebase with main
+git fetch --all && git merge origin/main
+
+# push to remote
+git push
+```
 
 
-main = b2.Path()
+## _`b2display` Path Settings_
 
-# Add RootInput
-main.add_module("RootInput", inputFileName="mixed_sim.root")
-
-# Add full reconstruction
-# re.add_reconstruction(path=main)
-
-# Add full tracking reconstuction
-trkx.add_tracking_reconstruction(
-    path=main,
-    components=None,
-    pruneTracks=False,
-    mcTrackFinding=False,
-    skipGeometryAdding=False,
-)
-
-# Create the mDST output file
-additional_br = []
-outFile = "mdst_reco.root"
-mdst.add_mdst_output(
-    path=main,
-    mc=True,
-    filename=outFile,
-    additionalBranches=additional_br,
-    dataDescription=None,
-)
-
-b2.process(main)
-print(b2.statistics)
+```bash
+# fix for evtdisplay
+export LD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu:$LD_LIBRARY_PATH
 ```
