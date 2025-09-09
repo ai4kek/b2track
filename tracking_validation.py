@@ -10,7 +10,7 @@
 
 """
 To run this script:
-basf2 tracking_metrics.py -- -f1 mixed/mixed_ntuple.root -p1 mixed
+basf2 tracking_validation.py -- -f1 mixed/mixed_ntuple.root -p1 mixed
 """
 
 import argparse
