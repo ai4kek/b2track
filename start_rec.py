@@ -38,7 +38,12 @@ def parse_args():
         default="dataset",
         help="Output directory (default: dataset)",
     )
-
+    parser.add_argument(
+        "--params",
+        type=str,
+        default=None,
+        help="Path to JSON file with ToCDCCKF parameters (optional)"
+    )
     # Handle both direct python and basf2 argument passing
     try:
         return parser.parse_args()
@@ -92,7 +97,7 @@ def main():
         path=main,
         mc=True,
         filename=f"{args.outputdir}/{args.finalstate}_mdst.root",
-        additionalBranches=additional_br,
+        # additionalBranches=additional_br,
     )
 
     # Save all dataobjects
