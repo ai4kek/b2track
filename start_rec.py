@@ -42,7 +42,7 @@ def parse_args():
         "--params",
         type=str,
         default=None,
-        help="Path to JSON file with ToCDCCKF parameters (optional)"
+        help="Path to JSON file with ToCDCCKF parameters (optional)",
     )
     # Handle both direct python and basf2 argument passing
     try:
@@ -79,6 +79,9 @@ def main():
         # Load ToCDCCKF parameters from JSON file
         with open(args.params, "r") as f:
             params = json.load(f)
+
+        # Print parameters
+        print(params)
 
         # Inject parameters into ToCDCCKF
         basf2.set_module_parameters(main, name="ToCDCCKF", recursive=True, **params)
