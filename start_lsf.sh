@@ -14,26 +14,26 @@
 #BSUB -B                              # Send email at job start
 #BSUB -N                              # Send email at job completion
 
+mkdir -p logs
 echo "Running job $LSB_JOBID on $(hostname)"
 echo "Running job index: $LSB_JOBINDEX"
 
-
-
-mkdir -p logs
+# source basf2 release
 source /cvmfs/belle.cern.ch/tools/b2setup release-08-03-00
+
 
 echo "Job started on $(date)"
 
 # run generator
-basf2 start_gen.py > "logs/start_gen.log" 2>&1
-echo "start_gen.py script executed successfully..."
+# basf2 start_gen.py 2>&1 | tee "dataset/start_gen.log"
+# echo "start_gen.py script executed successfully..."
 
-# run simulation
-basf2 start_mcri.py > "logs/start_mcri.log" 2>&1
-echo "start_mcri.py script executed successfully..."
+# run simulation (mcri, mcrd)
+# basf2 start_mcri.py 2>&1 | tee "dataset/start_mcri.log"
+# echo "start_mcri.py script executed successfully..."
 
 # run reconstruction
-basf2 start_rec.py > "logs/start_rec.log" 2>&1
+basf2 start_rec.py 2>&1 | tee "dataset/start_rec.log"
 echo "start_rec.py script executed successfully..."
 
 echo "Job finished on $(date)"
