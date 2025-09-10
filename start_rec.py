@@ -30,7 +30,7 @@ def parse_args():
         "--output",
         type=str,
         default="dataset/mixed_mdst.root",
-        help="Input ROOT file path (default: %(default)s)",
+        help="Output ROOT file path (default: %(default)s)",
     )
     parser.add_argument(
         "--params",
