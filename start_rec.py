@@ -24,26 +24,25 @@ def parse_args():
         "--input",
         type=str,
         default="dataset/mixed_sim.root",
-        help="Input ROOT file path (default: dataset/mixed_sim.root)",
+        help="Input ROOT file path (default: %(default)s)",
     )
     parser.add_argument(
-        "--finalstate",
+        "--output",
         type=str,
-        default="mixed",
-        help="Final state type (default: mixed)",
-    )
-
-    parser.add_argument(
-        "--outputdir",
-        type=str,
-        default="dataset",
-        help="Output directory (default: dataset)",
+        default="dataset/mixed_mdst.root",
+        help="Input ROOT file path (default: %(default)s)",
     )
     parser.add_argument(
         "--params",
         type=str,
         default=None,
         help="Path to JSON file with ToCDCCKF parameters (optional)",
+    )
+    parser.add_argument(
+        "--finalstate",
+        type=str,
+        default="mixed",
+        help="Final state type (default: %(default)s)",
     )
     # Handle both direct python and basf2 argument passing
     try:
@@ -103,12 +102,12 @@ def main():
     mdst.add_mdst_output(
         path=main,
         mc=True,
-        filename=f"{args.outputdir}/{args.finalstate}_mdst.root",
+        filename=f"{args.output}",
         # additionalBranches=additional_br,
     )
 
     # Save all dataobjects
-    # main.add_module("RootOutput", outputFileName=f"{args.outputdir}/{args.finalstate}_rec.root")
+    # main.add_module("RootOutput", outputFileName=f"{args.output}")
 
     # Print modules in path
     # basf2.print_path(main)

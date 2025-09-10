@@ -17,8 +17,10 @@ echo "Job started on $(date)"
 # basf2 start_mcri.py 2>&1 | tee "dataset/start_mcri.log"
 # echo "start_mcri.py script executed successfully..."
 
-# run reconstruction
-basf2 start_rec.py 2>&1 | tee "dataset/start_rec.log"
+# run reconstruction (mdst, mdst+)
+basf2 start_rec.py -- --input dataset/mixed_sim.root --output dataset/mixed_mdst.root 2>&1 | tee "dataset/mixed_mdst.log"
+# basf2 start_rec.py -- --input dataset/mixed_sim.root --output dataset/mixed_mdst.root --params best_params.json 2>&1 | tee "dataset/mixed_mdst_hpo.log"
+
 echo "start_rec.py script executed successfully..."
 
 echo "Job finished on $(date)"

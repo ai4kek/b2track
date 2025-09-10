@@ -12,7 +12,7 @@ output_prefix=mixed_hpo
 
 # generate ntuples from mDST > ./validation/mixed_ntuple.root
 echo "generating ntuples from mDST..."
-basf2 tracking_performance.py -- -p "$output_prefix" -i "dataset/mixed_rec.root"
+basf2 tracking_performance.py -- -p "$output_prefix" -i "dataset/mixed_rec.root" 2>&1 | tee "validation/${output_prefix}.log"
 echo "tracking_performance.py script executed successfully..."
 
 # generate validation metrics > ./validation/mixed_hist.root
