@@ -68,6 +68,16 @@ def main():
         skipGeometryAdding=False,
     )
 
+    # Pass args to ToCDCCKF if --params is provided by the user.
+    if args.params is not None:
+
+        # Load ToCDCCKF parameters from JSON file
+        with open(args.params, "r") as f:
+            params = json.load(f)
+
+        # Inject parameters into ToCDCCKF
+        basf2.set_module_parameters(main, name="ToCDCCKF", recursive=True, **params)
+
     # Save mDST dataobjects
     additional_br = [
         "RecoTracks",
