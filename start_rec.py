@@ -102,7 +102,7 @@ def main():
     mdst.add_mdst_output(
         path=main,
         mc=True,
-        filename=f"{args.output}",
+        filename=args.output,
         # additionalBranches=additional_br,
     )
 
