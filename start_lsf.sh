@@ -21,7 +21,10 @@ echo "Running job index: $LSB_JOBINDEX"
 # source basf2 release
 source /cvmfs/belle.cern.ch/tools/b2setup release-08-03-00
 
-# Note: to pass args to script, add -- before an argparse flag
+# Note: to pass args to script, add -- before an argparse flag. For example,
+# basf2 start_rec.py -- --input dataset/mixed_sim.root --finalstate mixed
+# --outputdir dataset --params best_params.json
+
 
 echo "Job started on $(date)"
 

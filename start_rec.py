@@ -9,6 +9,7 @@
 ##########################################################################
 
 import argparse
+import json
 
 import basf2
 import mdst
@@ -73,18 +74,21 @@ def main():
         skipGeometryAdding=False,
     )
 
-    # Pass args to ToCDCCKF if --params is provided by the user.
+    # Pass args to ToCDCCKF if provided
     if args.params is not None:
 
         # Load ToCDCCKF parameters from JSON file
         with open(args.params, "r") as f:
             params = json.load(f)
 
-        # Print parameters
+        # Print loaded parameters
         print(params)
 
         # Inject parameters into ToCDCCKF
         basf2.set_module_parameters(main, name="ToCDCCKF", recursive=True, **params)
+
+        # Print ToCDCCKF prameters
+        basf2.print_params(basf2.register_module("ToCDCCKF"), print_values=True)
 
     # Save mDST dataobjects
     additional_br = [
