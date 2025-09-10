@@ -176,16 +176,16 @@ def parse_args():
         default="mixed_reco.root",
         help="Input ROOT file from reconstruction. Default: %(default)s",
     )
-
+    parser.add_argument(
+        "-o",
+        "--output",
+        default="validation",
+        help="Output directory (Default: %(default)s)",
+    )
     return parser.parse_args()
 
 
 def main(args):
-
-    # Setup output file names
-    prefix = args.prefix
-    ntuple_file = f"{prefix}/{prefix}_ntuple.root"
-    histogram_file = f"{prefix}/{prefix}_hist.root"
 
     # Setup variable aliases
     setup_aliases()
@@ -203,6 +203,9 @@ def main(args):
     else:
         filelist = [b2.find_file(input_file, "examples", False)]
 
+    # Handle output
+    os.makedirs(args.output, exist_ok=True)
+
     # Input the mDST
     ma.inputMdstList(filelist=filelist, environmentType="default", path=main)
 
@@ -216,6 +219,10 @@ def main(args):
 
     ma.fillParticleLists([pions, kaons, protons], path=main)
     ma.cutAndCopyList("pi+:matched", "pi+:all", cut="isPrimarySignal==1", path=main)
+
+    # Setup output file names
+    ntuple_file = f"{args.output}/{args.prefix}_ntuple.root"
+    histogram_file = f"{args.output}/{args.prefix}_hist.root"
 
     # Create ntuples
     create_ntuples(main, output_file=ntuple_file)
