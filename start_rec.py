@@ -18,7 +18,7 @@ import tracking
 
 def parse_args():
     parser = argparse.ArgumentParser(
-        description="Run SVD tracking with specified parameters"
+        description="Run basf2 Full Tracking Reconstruction"
     )
     parser.add_argument(
         "--input",
@@ -38,18 +38,7 @@ def parse_args():
         default=None,
         help="Path to JSON file with ToCDCCKF parameters (optional)",
     )
-    parser.add_argument(
-        "--finalstate",
-        type=str,
-        default="mixed",
-        help="Final state type (default: %(default)s)",
-    )
-    # Handle both direct python and basf2 argument passing
-    try:
-        return parser.parse_args()
-    except SystemExit:
-        # If parsing fails (when run with python directly), return default values
-        return parser.parse_args([])
+    return parser.parse_args()
 
 
 def main():

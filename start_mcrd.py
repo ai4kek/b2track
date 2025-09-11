@@ -21,26 +21,21 @@ import simulation as si
 
 def parse_args():
     parser = argparse.ArgumentParser(
-        description="Run-dependent MC (similar as MC16rd-prompt)."
+        description="Run-dependent MC (similar to MC16rd-prompt samples)."
+    )
+    parser.add_argument(
+        "--output",
+        type=str,
+        default="dataset/mixed_mcrd.root",
+        help="Output ROOT file path (default: %(default)s)",
     )
     parser.add_argument(
         "--finalstate",
         type=str,
         default="mixed",
-        help="Final state type (default: mixed)",
+        help="Final state type (default: %(default)s)",
     )
-    parser.add_argument(
-        "--outputdir",
-        type=str,
-        default="dataset",
-        help="Output directory (default: dataset)",
-    )
-    # Handle both direct python and basf2 argument passing
-    try:
-        return parser.parse_args()
-    except SystemExit:
-        # If parsing fails (when run with python directly), return default values
-        return parser.parse_args([])
+    return parser.parse_args()
 
 
 def main():
@@ -58,7 +53,7 @@ def main():
     # Steering Path
     main = b2.create_path()
 
-    # Set event info
+    # For MCrd, use exp # 35 and any run number > 1500, special payload needed.
     main.add_module("EventInfoSetter", evtNumList=[9528], expList=[35], runList=[1853])
 
     # Events generator
@@ -95,9 +90,7 @@ def main():
     )
 
     # Save all dataobjects
-    main.add_module(
-        "RootOutput", outputFileName=f"{args.outputdir}/{args.finalstate}_sim.root"
-    )
+    main.add_module("RootOutput", outputFileName=args.output)
 
     # Print modules in path
     # b2.print_path(main)

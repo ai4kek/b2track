@@ -31,25 +31,23 @@ import simulation as si
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="Run-independent MC (MC16ri-like).")
+    parser = argparse.ArgumentParser(
+        description="Run-independent MC (similar to MC16ri samples)."
+    )
+
+    parser.add_argument(
+        "--output",
+        type=str,
+        default="dataset/mixed_mcri.root",
+        help="Output ROOT file path (default: %(default)s)",
+    )
     parser.add_argument(
         "--finalstate",
         type=str,
         default="mixed",
-        help="Final state type (default: mixed)",
+        help="Final state type (default: %(default)s)",
     )
-    parser.add_argument(
-        "--outputdir",
-        type=str,
-        default="dataset",
-        help="Output directory (default: dataset)",
-    )
-    # Handle both direct python and basf2 argument passing
-    try:
-        return parser.parse_args()
-    except SystemExit:
-        # If parsing fails (when run with python directly), return default values
-        return parser.parse_args([])
+    return parser.parse_args()
 
 
 def main():
@@ -61,9 +59,8 @@ def main():
     # Steering Path
     main = basf2.Path()
 
-    # MCri settings, chose exp number 0/1003/1004 and run number 0. For MCrd, use
-    # exp number 35 and any run number after 1500, it requires a special payload.
-    main.add_module("EventInfoSetter", evtNumList=[9528], expList=[0], runList=[0])
+    # MCri settings, chose exp number 0/1003/1004 and run number 0.
+    main.add_module("EventInfoSetter", evtNumList=[1000], expList=[0], runList=[0])
 
     # MC sample: 'mixed' (BBbar), 'charged' (B+B-), 'mu+mu-' (dimuon), 'tau+tau-'
 
@@ -99,9 +96,7 @@ def main():
     )
 
     # Save all dataobjects
-    main.add_module(
-        "RootOutput", outputFileName=f"{args.outputdir}/{args.finalstate}_sim.root"
-    )
+    main.add_module("RootOutput", outputFileName=args.output)
 
     # Print modules in path
     # basf2.print_path(main)

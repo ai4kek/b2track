@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# source basf2 release
+# source basf2 release (release-08-03-00, release-09-00-03)
 source /cvmfs/belle.cern.ch/tools/b2setup release-08-03-00
 
 # Note: to pass args to script, add -- before an argparse flag. For example,
@@ -14,13 +14,12 @@ echo "Job started on $(date)"
 # echo "start_gen.py script executed successfully..."
 
 # run simulation
-# basf2 start_mcri.py 2>&1 | tee "dataset/start_mcri.log"
+# basf2 start_mcri.py 2>&1 | tee "dataset/mixed_mcri.log"
 # echo "start_mcri.py script executed successfully..."
 
 # run reconstruction (mdst, mdst+)
-basf2 start_rec.py -- --input dataset/mixed_sim.root --output dataset/mixed_mdst.root 2>&1 | tee "dataset/mixed_mdst.log"
+# basf2 start_rec.py -- --input dataset/mixed_sim.root --output dataset/mixed_mdst.root 2>&1 | tee "dataset/mixed_mdst.log"
 # basf2 start_rec.py -- --input dataset/mixed_sim.root --output dataset/mixed_mdst.root --params best_params.json 2>&1 | tee "dataset/mixed_mdst_hpo.log"
-
-echo "start_rec.py script executed successfully..."
+# echo "start_rec.py script executed successfully..."
 
 echo "Job finished on $(date)"
