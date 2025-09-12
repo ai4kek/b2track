@@ -8,11 +8,11 @@ source /cvmfs/belle.cern.ch/tools/b2setup release-08-03-00
 
 
 # sample name
-output_prefix=mixed
+output_prefix=mixed_mcrd_hpo
 
 # generate ntuples from mDST > ./validation/mixed_ntuple.root
 echo "generating ntuples from mDST..."
-basf2 tracking_performance.py -- -p "$output_prefix" -i "dataset/mixed_rec.root"
+basf2 tracking_performance.py -- -p "$output_prefix" -i "dataset/mixed_mcrd_mdst_hpo_1k.root"
 echo "tracking_performance.py script executed successfully..."
 
 # generate validation metrics > ./validation/mixed_hist.root

@@ -10,16 +10,16 @@ source /cvmfs/belle.cern.ch/tools/b2setup release-08-03-00
 echo "Job started on $(date)"
 
 # run generator
-# basf2 start_gen.py 2>&1 | tee "dataset/start_gen.log"
+# basf2 start_gen.py 2>&1 | tee "dataset/mixed_gen.log"
 # echo "start_gen.py script executed successfully..."
 
-# run simulation
-# basf2 start_mcri.py 2>&1 | tee "dataset/mixed_mcri.log"
-# echo "start_mcri.py script executed successfully..."
+# run simulation (mcri, mcrd)
+# basf2 start_mcrd.py 2>&1 | tee "dataset/mixed_mcrd.log"
+# echo "start_mcrd.py script executed successfully..."
 
 # run reconstruction (mdst, mdst+)
-# basf2 start_rec.py -- --input dataset/mixed_sim.root --output dataset/mixed_mdst.root 2>&1 | tee "dataset/mixed_mdst.log"
-# basf2 start_rec.py -- --input dataset/mixed_sim.root --output dataset/mixed_mdst.root --params best_params.json 2>&1 | tee "dataset/mixed_mdst_hpo.log"
+# basf2 start_rec.py -- --input dataset/mixed_mcrd.root --output dataset/mixed_mcrd_mdst.root 2>&1 | tee "dataset/mixed_mcrd_mdst.log"
+# basf2 start_rec.py -- --input dataset/mixed_mcrd.root --output dataset/mixed_mcrd_mdst_hpo.root --params best_mcrd.json 2>&1 | tee "dataset/mixed_mcrd_mdst_hpo.log"
 # echo "start_rec.py script executed successfully..."
 
 echo "Job finished on $(date)"
