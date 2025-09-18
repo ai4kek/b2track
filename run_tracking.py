@@ -19,6 +19,7 @@ import tracking
 
 from src.tracking_evalution import TrackEvaluation
 from src.tracking_metrics import TrackMetrics
+from src.utils import print_module_params
 
 
 def parse_args():
@@ -50,12 +51,7 @@ def parse_args():
         help="Output metrics CSV file (default: metrics.csv)",
     )
 
-    # Handle both direct python and basf2 argument passing
-    try:
-        return parser.parse_args()
-    except SystemExit:
-        # If parsing fails (when run with python directly), return default values
-        return parser.parse_args([])
+    return parser.parse_args()
 
 
 def main():
@@ -85,6 +81,9 @@ def main():
 
     # Inject parameters into ToCDCCKF
     basf2.set_module_parameters(main, name="ToCDCCKF", recursive=True, **params)
+
+    # Print new prameters, don't use basf2.print_params() rather use this wrapper
+    # print_module_params(main, "ToCDCCKF")
 
     # Calculate tracking metrics
     # metrics = TrackMetrics(params, args.finalstate, filename=args.metrics)

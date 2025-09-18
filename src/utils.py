@@ -1,6 +1,14 @@
 import csv
 
 
+def print_module_params(path, name="ToCDCCKF"):
+    """Custom wrapper function to print module parameters."""
+    for module in path.modules():
+        if module.name() == name:
+            print(f"[INFO] Parameters of {name} in path:")
+            basf2.print_params(module, print_values=True)
+
+
 def save_params_to_csv(
     module, print_values=True, shared_lib_path=None, filename="parameters.csv"
 ):

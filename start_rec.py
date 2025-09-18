@@ -15,6 +15,8 @@ import basf2
 import mdst
 import tracking
 
+from src.utils import print_module_params
+
 
 def parse_args():
     parser = argparse.ArgumentParser(
@@ -69,14 +71,11 @@ def main():
         with open(args.params, "r") as f:
             params = json.load(f)
 
-        # Print loaded parameters
-        print(params)
-
         # Inject parameters into ToCDCCKF
         basf2.set_module_parameters(main, name="ToCDCCKF", recursive=True, **params)
 
-        # Print ToCDCCKF prameters
-        basf2.print_params(basf2.register_module("ToCDCCKF"), print_values=True)
+        # Print new prameters, don't use basf2.print_params() rather use this wrapper
+        print_module_params(main, "ToCDCCKF")
 
     # Save mDST dataobjects
     additional_br = [
