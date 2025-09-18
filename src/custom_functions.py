@@ -91,8 +91,10 @@ def ratio_2D(
             range_x[0] + ii * bin_width_x + (bin_width_x) / 2.0 for ii in range(bins_x)
         ]
     else:
-        bin_width_x = [(bins_x[i + 1] - bins_x[i]) for i in range(len(bins_x) - 1)]
-        x_val = [(bins_x[i] + bin_width_x[i] / 2) for i in range(len(bins_x) - 1)]
+        bin_width_x = [(bins_x[i + 1] - bins_x[i])
+                       for i in range(len(bins_x) - 1)]
+        x_val = [(bins_x[i] + bin_width_x[i] / 2)
+                 for i in range(len(bins_x) - 1)]
         # print('# x val', len(x_val), '\t # edges: ', len(binx_x))
 
     if type(bins_y) is int:
@@ -101,8 +103,10 @@ def ratio_2D(
             range_y[0] + ii * bin_width_y + (bin_width_y) / 2.0 for ii in range(bins_y)
         ]
     else:
-        bin_width_y = [(bins_y[i + 1] - bins_y[i]) for i in range(len(bins_y) - 1)]
-        y_val = [(bins_y[i] + bin_width_y[i] / 2) for i in range(len(bins_y) - 1)]
+        bin_width_y = [(bins_y[i + 1] - bins_y[i])
+                       for i in range(len(bins_y) - 1)]
+        y_val = [(bins_y[i] + bin_width_y[i] / 2)
+                 for i in range(len(bins_y) - 1)]
 
     xlbl, ylbl = x_label, y_label
     if xlbl == None:
@@ -118,7 +122,8 @@ def ratio_2D(
         err_ratio_overall = np.sqrt((ratio_overall * (1 - ratio_overall))) / np.sqrt(
             len(denominator[x_var])
         )
-    print("ratio (overall):", f"{ratio_overall:.6f} +- {err_ratio_overall:.6f}")
+    print("ratio (overall):",
+          f"{ratio_overall:.6f} +- {err_ratio_overall:.6f}")
 
     fig, ax = plt.subplots(1, 2, figsize=(12, 6))
     # hist2d of the numerator
@@ -268,7 +273,8 @@ def ratio_2D(
             ]
         )
         cbar = axE.figure.colorbar(pc2, ax=axE, cax=cax)
-        cbar.ax.set_ylabel("Error " + cbar_label, va="bottom", fontsize=16, labelpad=25)
+        cbar.ax.set_ylabel("Error " + cbar_label,
+                           va="bottom", fontsize=16, labelpad=25)
         if size_text != None:
             texts = []
             c_text = "darkcyan"
@@ -377,8 +383,10 @@ def chargeasym_2D(
             range_x[0] + ii * bin_width_x + (bin_width_x) / 2.0 for ii in range(bins_x)
         ]
     else:
-        bin_width_x = [(bins_x[i + 1] - bins_x[i]) for i in range(len(bins_x) - 1)]
-        x_val = [(bins_x[i] + bin_width_x[i] / 2) for i in range(len(bins_x) - 1)]
+        bin_width_x = [(bins_x[i + 1] - bins_x[i])
+                       for i in range(len(bins_x) - 1)]
+        x_val = [(bins_x[i] + bin_width_x[i] / 2)
+                 for i in range(len(bins_x) - 1)]
 
     if type(bins_y) is int:
         bin_width_y = (range_y[1] - range_y[0]) / bins_y
@@ -386,8 +394,10 @@ def chargeasym_2D(
             range_y[0] + ii * bin_width_y + (bin_width_y) / 2.0 for ii in range(bins_y)
         ]
     else:
-        bin_width_y = [(bins_y[i + 1] - bins_y[i]) for i in range(len(bins_y) - 1)]
-        y_val = [(bins_y[i] + bin_width_y[i] / 2) for i in range(len(bins_y) - 1)]
+        bin_width_y = [(bins_y[i + 1] - bins_y[i])
+                       for i in range(len(bins_y) - 1)]
+        y_val = [(bins_y[i] + bin_width_y[i] / 2)
+                 for i in range(len(bins_y) - 1)]
 
     xlbl, ylbl = x_label, y_label
     if xlbl == None:
@@ -565,7 +575,8 @@ def chargeasym_2D(
             ]
         )
         cbar = axE.figure.colorbar(pc2, ax=axE, cax=cax)
-        cbar.ax.set_ylabel("Error " + cbar_label, va="bottom", fontsize=20, labelpad=25)
+        cbar.ax.set_ylabel("Error " + cbar_label,
+                           va="bottom", fontsize=20, labelpad=25)
 
         if color_text != None:
             texts = []
@@ -667,8 +678,10 @@ def normalized_2D(
             range_x[0] + ii * bin_width_x + (bin_width_x) / 2.0 for ii in range(bins_x)
         ]
     else:
-        bin_width_x = [(bins_x[i + 1] - bins_x[i]) for i in range(len(bins_x) - 1)]
-        x_val = [(bins_x[i] + bin_width_x[i] / 2) for i in range(len(bins_x) - 1)]
+        bin_width_x = [(bins_x[i + 1] - bins_x[i])
+                       for i in range(len(bins_x) - 1)]
+        x_val = [(bins_x[i] + bin_width_x[i] / 2)
+                 for i in range(len(bins_x) - 1)]
 
     if type(bins_y) is int:
         bin_width_y = (range_y[1] - range_y[0]) / bins_y
@@ -676,8 +689,10 @@ def normalized_2D(
             range_y[0] + ii * bin_width_y + (bin_width_y) / 2.0 for ii in range(bins_y)
         ]
     else:
-        bin_width_y = [(bins_y[i + 1] - bins_y[i]) for i in range(len(bins_y) - 1)]
-        y_val = [(bins_y[i] + bin_width_y[i] / 2) for i in range(len(bins_y) - 1)]
+        bin_width_y = [(bins_y[i + 1] - bins_y[i])
+                       for i in range(len(bins_y) - 1)]
+        y_val = [(bins_y[i] + bin_width_y[i] / 2)
+                 for i in range(len(bins_y) - 1)]
 
     xlbl, ylbl = x_label, y_label
     if xlbl == None:
@@ -687,7 +702,8 @@ def normalized_2D(
 
     nEntries = len(variable[x_var])
     s_plotlim = (
-        "(" + x_var + ">" + str(range_x[0]) + " and " + x_var + "<" + str(range_x[1])
+        "(" + x_var + ">" + str(range_x[0]) +
+        " and " + x_var + "<" + str(range_x[1])
     )
     s_plotlim += (
         " and "
@@ -707,7 +723,8 @@ def normalized_2D(
     nEntries_inPlot = len(var_inPlot[x_var])
 
     print("# entries:", nEntries, "\t # entries in plot range:", nEntries_inPlot)
-    print("Fraction pions in plot range:", nEntries_inPlot / nEntries * 100, " %")
+    print("Fraction pions in plot range:",
+          nEntries_inPlot / nEntries * 100, " %")
     print(
         "Fraction pions outside plot range:",
         (1 - (nEntries_inPlot / nEntries)) * 100,
@@ -847,12 +864,14 @@ def ratio_1D(
     xval = np.array([b + hwb for b in b0[:-1]])
     ratio = np.array([a1[i] / a0[i] for i in range(len(a0))])
     err_ratio = np.array(
-        [np.sqrt(ratio[i] * (1 - ratio[i])) / np.sqrt(a0[i]) for i in range(len(a0))]
+        [np.sqrt(ratio[i] * (1 - ratio[i])) / np.sqrt(a0[i])
+         for i in range(len(a0))]
     )
 
     plt.clf()
 
-    plt.fill_between(xval, ratio - err_ratio, ratio + err_ratio, color=clr, alpha=0.3)
+    plt.fill_between(xval, ratio - err_ratio, ratio +
+                     err_ratio, color=clr, alpha=0.3)
     plt.plot(xval, ratio, "o-", color=clr)  # , linewidth=5)
 
     # ax.set_xlabel(x_label, fontsize=20)

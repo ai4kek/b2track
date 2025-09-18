@@ -150,7 +150,8 @@ def trial_objective(parameters):
     # Print trial info
     print(f"Trial {trial_number} | F1: {f1_score:.4f} | Params: {params}")
 
-    return torch.tensor([f1_score], device=DEVICE)  # Return as tensor for BoTorch
+    # Return as tensor for BoTorch
+    return torch.tensor([f1_score], device=DEVICE)
 
 
 # --- Main ---
@@ -211,7 +212,8 @@ def run_optimization(start_trial, n_trials, init_points, worker_id=None):
 def main():
     """Parse arguments, initialize CSV, run BoTorch optimization, and report best parameters."""
     # Parse arguments
-    parser = argparse.ArgumentParser(description="BoTorch Bayesian Optimization.")
+    parser = argparse.ArgumentParser(
+        description="BoTorch Bayesian Optimization.")
     parser.add_argument(
         "--trials", type=int, default=MAX_TRIALS, help="Number of trials to run"
     )
@@ -227,7 +229,8 @@ def main():
         default=N_INITIAL_POINTS,
         help="Number of initial random points",
     )
-    parser.add_argument("--slurm", action="store_true", help="Run in Slurm mode")
+    parser.add_argument("--slurm", action="store_true",
+                        help="Run in Slurm mode")
     args = parser.parse_args()
 
     # Handle Slurm array job
@@ -241,7 +244,8 @@ def main():
         start_trial = job_id * trials_per_job
         end_trial = start_trial + trials_per_job if job_id < n_jobs - 1 else args.trials
 
-        print(f"[INFO] Job {job_id} handling trials {start_trial} to {end_trial-1}")
+        print(
+            f"[INFO] Job {job_id} handling trials {start_trial} to {end_trial-1}")
 
         # Initialize worker metrics
         init_metrics_csv(job_id)
@@ -285,7 +289,8 @@ def main():
             run_optimization(
                 start_trial=start_trial,
                 n_trials=end_trial - start_trial,
-                init_points=min(args.init_points, (end_trial - start_trial) // 2),
+                init_points=min(args.init_points,
+                                (end_trial - start_trial) // 2),
                 worker_id=i if args.workers > 1 else None,
             )
 

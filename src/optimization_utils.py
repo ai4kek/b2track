@@ -271,7 +271,8 @@ def run_tracking_with_params(
                 f"Worker {worker_id}, Trial {trial_number}: Tracking command failed: {e}"
             )
             if attempt < max_retries - 1:
-                main_logger.info(f"Retrying... (attempt {attempt + 1}/{max_retries})")
+                main_logger.info(
+                    f"Retrying... (attempt {attempt + 1}/{max_retries})")
                 time.sleep(5)  # Wait before retry
                 continue
 

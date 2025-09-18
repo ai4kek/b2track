@@ -88,7 +88,7 @@ class TrackMetrics(basf2.Module):
                 ]("Tracks")
 
                 # count matched particles
-                if particle_to_track_relation:  #  and weight > 0.:
+                if particle_to_track_relation:  # and weight > 0.:
                     self.matched_mc_particles += 1
         return 0
 
@@ -111,7 +111,8 @@ class TrackMetrics(basf2.Module):
         # f1 score
         f1 = (2 * efficiency * purity) / (efficiency + purity + 1e-8)
 
-        print(f"\nEfficiency: {efficiency:.4f}, Purity: {purity:.4f}, F1: {f1:.4f}")
+        print(
+            f"\nEfficiency: {efficiency:.4f}, Purity: {purity:.4f}, F1: {f1:.4f}")
 
         # Header order
         field_order = [

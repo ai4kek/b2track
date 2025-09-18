@@ -40,7 +40,8 @@ log_file = log_dir / "optimization.log"
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(processName)s - %(levelname)s - %(message)s",
-    handlers=[logging.FileHandler(log_file), logging.StreamHandler(sys.stdout)],
+    handlers=[logging.FileHandler(
+        log_file), logging.StreamHandler(sys.stdout)],
 )
 logger = logging.getLogger("optimizer")
 
@@ -70,7 +71,8 @@ def trial_objective(vector):
     global _trial_counter, _worker_id
 
     # Convert vector to parameter values
-    params = {k: PARAM_SPACE[k][int(round(v))] for k, v in zip(PARAM_SPACE, vector)}
+    params = {k: PARAM_SPACE[k][int(round(v))]
+              for k, v in zip(PARAM_SPACE, vector)}
     param_hash = compute_param_hash(params)
 
     # Increment trial counter
@@ -145,7 +147,8 @@ def main():
             cluster_type = "Slurm"
         # Check for LSF environment variables
         elif "LSB_JOBINDEX" in os.environ:
-            job_id = int(os.environ.get("LSB_JOBINDEX", "0")) - 1  # LSF is 1-indexed
+            job_id = int(os.environ.get("LSB_JOBINDEX", "0")) - \
+                1  # LSF is 1-indexed
             # For LSF, we need to calculate total jobs differently
             # LSB_JOBINDEX_END gives the last index in the job array
             if "LSB_JOBINDEX_END" in os.environ:
@@ -180,7 +183,8 @@ def main():
             start_trial + trials_per_job if job_id < n_jobs - 1 else args.max_trials
         )
 
-        logger.info(f"Job {job_id} handling trials {start_trial} to {end_trial-1}")
+        logger.info(
+            f"Job {job_id} handling trials {start_trial} to {end_trial-1}")
 
         # Run optimization with single worker (each cluster job is its own worker)
         result = differential_evolution(
@@ -195,7 +199,8 @@ def main():
             + job_id
             + hash(str(time.time())) % 10000,  # More varied seed
             updating="immediate",  # Use immediate updates
-            popsize=max(7, n_jobs),  # Ensure population size scales with total jobs
+            # Ensure population size scales with total jobs
+            popsize=max(7, n_jobs),
             mutation=(0.5, 1.0),  # Allow more mutation to explore space
             recombination=0.7,  # Increase recombination probability
             tol=args.tol,  # Stop when converged
@@ -214,7 +219,8 @@ def main():
             # Create workers with sequential IDs
             worker_ids = list(range(args.workers))
             with Pool(
-                processes=args.workers, initializer=init_worker, initargs=(worker_ids,)
+                processes=args.workers, initializer=init_worker, initargs=(
+                    worker_ids,)
             ) as pool:
 
                 result = differential_evolution(

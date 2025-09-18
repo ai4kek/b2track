@@ -149,7 +149,8 @@ def main():
     parser.add_argument(
         "--seed", type=int, default=RANDOM_SEED, help="Random seed for reproducibility"
     )
-    parser.add_argument("--slurm", action="store_true", help="Run in Slurm mode")
+    parser.add_argument("--slurm", action="store_true",
+                        help="Run in Slurm mode")
     args = parser.parse_args()
 
     # Initialize Ray (with Slurm settings if needed)
@@ -163,7 +164,8 @@ def main():
 
     # Create search space for Ray Tune
     # Each parameter is a choice from the PARAM_SPACE list
-    search_space = {param: tune.choice(values) for param, values in PARAM_SPACE.items()}
+    search_space = {param: tune.choice(values)
+                    for param, values in PARAM_SPACE.items()}
 
     # Configure ASHA scheduler for early stopping
     scheduler = ASHAScheduler(

@@ -71,10 +71,12 @@ def main():
     main.add_module("Gearbox")
     main.add_module("Geometry")
 
-    main.add_module("SetupGenfitExtrapolation", energyLossBrems=False, noiseBrems=False)
+    main.add_module("SetupGenfitExtrapolation",
+                    energyLossBrems=False, noiseBrems=False)
 
     svd.add_svd_reconstruction(main)
-    add_vxd_track_finding_vxdtf2(main, reco_tracks="RecoTracksSVD", components=["SVD"])
+    add_vxd_track_finding_vxdtf2(
+        main, reco_tracks="RecoTracksSVD", components=["SVD"])
     main.add_module("DAFRecoFitter", recoTracksStoreArrayName="RecoTracksSVD")
 
     main.add_module(
@@ -117,7 +119,8 @@ def main():
         params = json.load(f)
 
     # Inject parameters into ToCDCCKF
-    basf2.set_module_parameters(main, name="ToCDCCKF", recursive=True, **params)
+    basf2.set_module_parameters(
+        main, name="ToCDCCKF", recursive=True, **params)
 
     # Print new prameters, don't use basf2.print_params() rather use this wrapper
     # print_module_params(main, "ToCDCCKF")

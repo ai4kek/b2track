@@ -39,14 +39,16 @@ def SVDPlot(x, y, col, show=0):
 
     # SVD Layout
     layers = [3.9, 8.0, 10.4, 13.5]
-    Circs = [Circle((0, 0), a, facecolor="none", edgecolor="lightgrey") for a in layers]
+    Circs = [Circle((0, 0), a, facecolor="none", edgecolor="lightgrey")
+             for a in layers]
     for e in Circs:
         ax.add_artist(e)
 
     # Draw the x/y arrays. Note that looping over the hits
     # and drawing them individually would be much slower.
     for i in range(len(col)):
-        ax.plot(x[i], y[i], marker=".", color=col[i], linestyle="None", markersize=1)
+        ax.plot(x[i], y[i], marker=".", color=col[i],
+                linestyle="None", markersize=1)
 
     # Axis Params
     ax.set_title("SVDSimHits")
@@ -76,7 +78,8 @@ def CDCPlot(x, y, col, show=0):
     # draw the x/y arrays. note that looping over the hits and
     # drawing them individually would be much slower
     for i in range(len(col)):
-        ax.plot(x[i], y[i], marker=".", color=col[i], linestyle="None", markersize=1)
+        ax.plot(x[i], y[i], marker=".", color=col[i],
+                linestyle="None", markersize=1)
 
     ax.set_title("CDCSimHits")
     ax.set_xlabel("x [cm]")
@@ -85,7 +88,8 @@ def CDCPlot(x, y, col, show=0):
 
     # draw CDC superlayer boundaries
     layers = [16.8, 25.7, 36.5, 47.6, 58.4, 69.5, 80.2, 91.3, 102.0, 111.1]
-    Circs = [Circle((0, 0), a, facecolor="none", edgecolor="lightgrey") for a in layers]
+    Circs = [Circle((0, 0), a, facecolor="none", edgecolor="lightgrey")
+             for a in layers]
     for e in Circs:
         ax.add_artist(e)
 

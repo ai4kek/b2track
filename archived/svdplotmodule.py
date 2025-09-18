@@ -40,7 +40,8 @@ def plot(x, y, col, show=0):
     # draw the x/y arrays. note that looping over the hits and
     # drawing them individually would be much slower
     for i in range(len(col)):
-        ax.plot(x[i], y[i], marker=".", color=col[i], linestyle="None", markersize=5)
+        ax.plot(x[i], y[i], marker=".", color=col[i],
+                linestyle="None", markersize=5)
 
     ax.set_title("SVDSimHits")
     ax.set_xlabel("x [cm]")

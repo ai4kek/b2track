@@ -54,7 +54,8 @@ def main():
     main = b2.create_path()
 
     # For MCrd, use exp # 35 and any run number > 1500, special payload needed.
-    main.add_module("EventInfoSetter", evtNumList=[9528], expList=[35], runList=[1853])
+    main.add_module("EventInfoSetter", evtNumList=[
+                    9528], expList=[35], runList=[1853])
 
     # Events generator
     if args.finalstate in ["mixed", "charged"]:

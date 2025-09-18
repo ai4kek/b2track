@@ -13,6 +13,7 @@ To run this script:
 basf2 tracking_validation.py -- -f1 mixed/mixed_ntuple.root -p1 mixed
 """
 
+import src.custom_functions as cf
 import argparse
 import math
 import os
@@ -28,7 +29,6 @@ from matplotlib.backends.backend_pdf import PdfPages
 
 # sys.path.append('/home/belle2/scavino/th_Performance/tracking_validation/')
 sys.path.append("../")
-import src.custom_functions as cf
 
 # ===============================================
 
@@ -61,14 +61,16 @@ def get_dataframes(
 def add_variables_to_mcdf(mc_df):
     mc_df["mcP"] = cf.p(mc_df["mcPX"], mc_df["mcPY"], mc_df["mcPZ"])
     mc_df["mcPT"] = cf.pt(mc_df["mcPX"], mc_df["mcPY"])
-    mc_df["mcCosTheta"] = cf.costheta(mc_df["mcPX"], mc_df["mcPY"], mc_df["mcPZ"])
+    mc_df["mcCosTheta"] = cf.costheta(
+        mc_df["mcPX"], mc_df["mcPY"], mc_df["mcPZ"])
     mc_df["mcPhi"] = cf.phi(mc_df["mcPX"], mc_df["mcPY"])
 
 
 def add_variables_to_recodf(reco_df):
     reco_df["p"] = cf.p(reco_df["px"], reco_df["py"], reco_df["pz"])
     reco_df["pt"] = cf.pt(reco_df["px"], reco_df["py"])
-    reco_df["cosTheta"] = cf.costheta(reco_df["px"], reco_df["py"], reco_df["pz"])
+    reco_df["cosTheta"] = cf.costheta(
+        reco_df["px"], reco_df["py"], reco_df["pz"])
     reco_df["phi"] = cf.phi(reco_df["px"], reco_df["py"])
 
     reco_df["mcP"] = cf.p(reco_df["mcPX"], reco_df["mcPY"], reco_df["mcPZ"])
@@ -81,8 +83,10 @@ def add_variables_to_recodf(reco_df):
 
 def mcdf_for_foms(mc_df):
     MCpions_tightMatch = mc_df.query("isPrimarySignal==1")
-    MCpions_tightMatch_plus = mc_df.query("isPrimarySignal==1 and mcPDG == 211")
-    MCpions_tightMatch_minus = mc_df.query("isPrimarySignal==1 and mcPDG == -211")
+    MCpions_tightMatch_plus = mc_df.query(
+        "isPrimarySignal==1 and mcPDG == 211")
+    MCpions_tightMatch_minus = mc_df.query(
+        "isPrimarySignal==1 and mcPDG == -211")
     return MCpions_tightMatch, MCpions_tightMatch_plus, MCpions_tightMatch_minus
 
 
@@ -98,15 +102,18 @@ def recodf_for_foms(reco_df):
     pions_clone = reco_df.query("isCloneTrack==1")
     pions_wRelationToMC = reco_df.query("isSignal==0 or isSignal==1")
     pions_flipRefit = reco_df.query("isTrackFlippedAndRefitted==1")
-    pions_tigthMatch_flipRefit = pions_tightMatch.query("isTrackFlippedAndRefitted==1")
+    pions_tigthMatch_flipRefit = pions_tightMatch.query(
+        "isTrackFlippedAndRefitted==1")
     pions_tigthMatch_flipRefit_plus = pions_tightMatch_plus.query(
         "isTrackFlippedAndRefitted==1"
     )
     pions_tigthMatch_flipRefit_minus = pions_tightMatch_minus.query(
         "isTrackFlippedAndRefitted==1"
     )
-    pions_looseMatch_flipRefit = pions_looseMatch.query("isTrackFlippedAndRefitted==1")
-    pions_wrongMatch_flipRefit = pions_wrongMatch.query("isTrackFlippedAndRefitted==1")
+    pions_looseMatch_flipRefit = pions_looseMatch.query(
+        "isTrackFlippedAndRefitted==1")
+    pions_wrongMatch_flipRefit = pions_wrongMatch.query(
+        "isTrackFlippedAndRefitted==1")
     pions_toBeFlipped = pions_looseMatch.query(
         "isTrackFlippedAndRefitted==1 or isSignal == 0"
     )  # (pions_looseMatch_flipRefit or pions_wrongMatch)
@@ -158,17 +165,21 @@ def recodf_for_foms_seen(reco_df):
         "isSignal!=0 and isSignal!=1"
     )  # seen for fakes make no sense
     pions_clone = reco_df.query(f"isCloneTrack==1 and {seen}")
-    pions_wRelationToMC = reco_df.query(f"(isSignal==0 or isSignal==1) and {seen}")
+    pions_wRelationToMC = reco_df.query(
+        f"(isSignal==0 or isSignal==1) and {seen}")
     pions_flipRefit = reco_df.query(f"isTrackFlippedAndRefitted==1 and {seen}")
-    pions_tigthMatch_flipRefit = pions_tightMatch.query("isTrackFlippedAndRefitted==1")
+    pions_tigthMatch_flipRefit = pions_tightMatch.query(
+        "isTrackFlippedAndRefitted==1")
     pions_tigthMatch_flipRefit_plus = pions_tightMatch_plus.query(
         "isTrackFlippedAndRefitted==1"
     )
     pions_tigthMatch_flipRefit_minus = pions_tightMatch_minus.query(
         "isTrackFlippedAndRefitted==1"
     )
-    pions_looseMatch_flipRefit = pions_looseMatch.query("isTrackFlippedAndRefitted==1")
-    pions_wrongMatch_flipRefit = pions_wrongMatch.query("isTrackFlippedAndRefitted==1")
+    pions_looseMatch_flipRefit = pions_looseMatch.query(
+        "isTrackFlippedAndRefitted==1")
+    pions_wrongMatch_flipRefit = pions_wrongMatch.query(
+        "isTrackFlippedAndRefitted==1")
     pions_toBeFlipped = pions_looseMatch.query(
         "isTrackFlippedAndRefitted==1 or isSignal == 0"
     )  # (pions_looseMatch_flipRefit or pions_wrongMatch)
@@ -835,7 +846,8 @@ def compare_plots(
             ]
         )
         cbar = ax.figure.colorbar(pc, ax=ax, cax=cax)
-        cbar.ax.set_ylabel(z_label, va="bottom", fontsize=20, labelpad=25, rotation=270)
+        cbar.ax.set_ylabel(z_label, va="bottom", fontsize=20,
+                           labelpad=25, rotation=270)
 
         if size_text != None:
             texts = []

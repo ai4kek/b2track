@@ -72,7 +72,8 @@ def main():
             params = json.load(f)
 
         # Inject parameters into ToCDCCKF
-        basf2.set_module_parameters(main, name="ToCDCCKF", recursive=True, **params)
+        basf2.set_module_parameters(
+            main, name="ToCDCCKF", recursive=True, **params)
 
         # Print new prameters, don't use basf2.print_params() rather use this wrapper
         print_module_params(main, "ToCDCCKF")

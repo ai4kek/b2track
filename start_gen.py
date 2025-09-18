@@ -49,7 +49,8 @@ def main():
 
     # Set expList=[0] or [12] or custom, need a specific globaltag/payload.
     # For run-independent Monte Carlo simulation set runList=[0] below.
-    main.add_module("EventInfoSetter", evtNumList=[1000], expList=[0], runList=[0])
+    main.add_module("EventInfoSetter", evtNumList=[
+                    1000], expList=[0], runList=[0])
 
     # MC sample: 'mixed' (BBbar), 'charged' (B+B-), 'mu+mu-' (dimuon), 'tau+tau-'
 

@@ -97,7 +97,8 @@ def process_chunk(worker_id, chunk):
             # Continue with the next trial even if this one failed
             continue
 
-    worker_logger.info(f"Worker {worker_id} completed {trials_processed} trials")
+    worker_logger.info(
+        f"Worker {worker_id} completed {trials_processed} trials")
     return trials_processed
 
 
@@ -127,7 +128,8 @@ def trial_objective(trial_number, param_values, worker_id):
         with params_path.open("w") as f:
             json.dump(params, f, indent=2)
     except Exception as e:
-        worker_logger.error(f"Failed to write parameter file {params_path}: {e}")
+        worker_logger.error(
+            f"Failed to write parameter file {params_path}: {e}")
         return 0.0  # Return zero to indicate failure
 
     # Run tracking with parameters
@@ -139,7 +141,8 @@ def trial_objective(trial_number, param_values, worker_id):
     if metrics_path.exists():
         try:
             # Append missing columns to metrics file
-            update_worker_metrics(worker_id, trial_number, elapsed, metrics_path)
+            update_worker_metrics(worker_id, trial_number,
+                                  elapsed, metrics_path)
             worker_logger.info(
                 f"Worker {worker_id} updated trial {trial_number} metrics file successfully"
             )
@@ -198,8 +201,10 @@ def main():
 
         # In cluster mode, --arrays must be specified
         if args.arrays is None:
-            main_logger.error("Error: --arrays parameter is required for cluster mode")
-            main_logger.error("Please specify the total number of jobs in the array")
+            main_logger.error(
+                "Error: --arrays parameter is required for cluster mode")
+            main_logger.error(
+                "Please specify the total number of jobs in the array")
             sys.exit(1)
 
         # Use the user-specified total number of jobs
@@ -218,8 +223,10 @@ def main():
         main_logger.info(f"Grid Search on LSF with {n_jobs} Jobs")
         main_logger.info(f"Worker {job_id} started for distributed processing")
 
-        worker_logger.info(f"Worker {job_id} started for distributed processing")
-        worker_logger.info(f"Worker {job_id} is one of {n_total_workers} total workers")
+        worker_logger.info(
+            f"Worker {job_id} started for distributed processing")
+        worker_logger.info(
+            f"Worker {job_id} is one of {n_total_workers} total workers")
 
         # Clean old worker files
         # cleanup_worker_files(job_id)
@@ -234,8 +241,10 @@ def main():
 
         # Calculate this worker's exact chunk boundaries
         # Workers 1 to remainder get one extra trial each
-        start_idx = (worker_id - 1) * base_chunk_size + min(worker_id - 1, remainder)
-        end_idx = start_idx + base_chunk_size + (1 if worker_id <= remainder else 0)
+        start_idx = (worker_id - 1) * base_chunk_size + \
+            min(worker_id - 1, remainder)
+        end_idx = start_idx + base_chunk_size + \
+            (1 if worker_id <= remainder else 0)
 
         # Log distribution details in main logger
         main_logger.info(
@@ -244,14 +253,17 @@ def main():
         main_logger.info(
             f"Current job is worker {job_id} of {n_jobs} in this submission"
         )
-        main_logger.info(f"  - Base chunk size: {base_chunk_size} trials per worker")
+        main_logger.info(
+            f"  - Base chunk size: {base_chunk_size} trials per worker")
         if remainder > 0:
             main_logger.info(
                 f"  - First {remainder} workers get {base_chunk_size + 1} trials"
             )
-            main_logger.info(f"  - Remaining workers get {base_chunk_size} trials")
+            main_logger.info(
+                f"  - Remaining workers get {base_chunk_size} trials")
         else:
-            main_logger.info("  - All workers get exactly same number of trials")
+            main_logger.info(
+                "  - All workers get exactly same number of trials")
 
         # Log this worker's specific assignment
         worker_logger.info(f"Worker {worker_id} assignment details:")
@@ -316,7 +328,8 @@ def main():
 
         # Multi-worker mode if workers > 1
         if args.workers > 1:
-            main_logger.info(f"Local multi-worker mode: Using {args.workers} workers")
+            main_logger.info(
+                f"Local multi-worker mode: Using {args.workers} workers")
             main_logger.info(
                 f"Starting {args.workers} workers for distributed processing"
             )
@@ -342,9 +355,11 @@ def main():
                 main_logger.info(
                     f"  - First {remainder} workers get {base_chunk_size + 1} trials"
                 )
-                main_logger.info(f"  - Remaining workers get {base_chunk_size} trials")
+                main_logger.info(
+                    f"  - Remaining workers get {base_chunk_size} trials")
             else:
-                main_logger.info("  - All workers get exactly same number of trials")
+                main_logger.info(
+                    "  - All workers get exactly same number of trials")
 
             for worker_id in range(1, args.workers + 1):  # 1-based worker IDs
                 # Calculate exact chunk boundaries for this worker
@@ -352,7 +367,8 @@ def main():
                     worker_id - 1, remainder
                 )
                 end_idx = (
-                    start_idx + base_chunk_size + (1 if worker_id <= remainder else 0)
+                    start_idx + base_chunk_size +
+                    (1 if worker_id <= remainder else 0)
                 )
 
                 if start_idx < NUM_GRID_POINTS:
@@ -382,7 +398,8 @@ def main():
                         )
 
             except Exception as e:
-                main_logger.error(f"Distributed processing failed with error: {e}")
+                main_logger.error(
+                    f"Distributed processing failed with error: {e}")
                 # Even if some workers fail, try to merge available results
                 main_logger.info(
                     "Attempting to merge available results from successful workers"
@@ -398,7 +415,8 @@ def main():
             # Single worker mode (only when --workers is not specified)
             main_logger.info("Grid Search with Single Worker")
             main_logger.info("Starting worker 1 for sequential processing")
-            main_logger.info(f"Processing {NUM_GRID_POINTS} trials sequentially")
+            main_logger.info(
+                f"Processing {NUM_GRID_POINTS} trials sequentially")
 
             # Process all trials using worker_id=1 (1-based)
             worker_id = 1  # Always use worker_id 1 for single worker mode
@@ -407,7 +425,8 @@ def main():
             # Log completion status
             if trials_processed < NUM_GRID_POINTS:
                 failed_trials = NUM_GRID_POINTS - trials_processed
-                main_logger.warning(f"Failed to process {failed_trials} trials")
+                main_logger.warning(
+                    f"Failed to process {failed_trials} trials")
             else:
                 main_logger.info(
                     f"Singel worker completed {NUM_GRID_POINTS} trials sequentially"

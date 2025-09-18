@@ -218,7 +218,8 @@ def main(args):
     protons = ("p+:matched", "isPrimarySignal == 1")
 
     ma.fillParticleLists([pions, kaons, protons], path=main)
-    ma.cutAndCopyList("pi+:matched", "pi+:all", cut="isPrimarySignal==1", path=main)
+    ma.cutAndCopyList("pi+:matched", "pi+:all",
+                      cut="isPrimarySignal==1", path=main)
 
     # Setup output file names
     ntuple_file = f"{args.output}/{args.prefix}_ntuple.root"

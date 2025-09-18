@@ -16,14 +16,13 @@ Run-independent (MC16ri) | Run-dependent (MC16rd)
 - exp 1004 = pre-LS2     | - produced with release-08-03 (Run 2)
 """
 
-# TODO: How to prepend a globaltag? (see Section 5.4 of basf2 docs)
-# TODO: How to add background to simulation? (see Section 9. of basf2 docs)
 # TODO: How to visualize wire efficiency map of CDC for an experiment?
+# See "cdc-utilities" repository from Giaccomo from KIT to visualize CDC.
 # TODO: How to switch on-off some parts of the CDC?
-
+# See "cdc-utilities" repository from Giaccomo from KIT to visualize CDC.
+# TODO: How to prepend a globaltag? (see Section 5.4 of basf2 docs)
 
 import argparse
-
 import background
 import basf2
 import generators as ge
@@ -34,11 +33,10 @@ def parse_args():
     parser = argparse.ArgumentParser(
         description="Run-independent MC (similar to MC16ri samples)."
     )
-
     parser.add_argument(
         "--output",
         type=str,
-        default="dataset/mixed_mcri.root",
+        default="dataset/mixed_sim.root",
         help="Output ROOT file path (default: %(default)s)",
     )
     parser.add_argument(
@@ -56,10 +54,16 @@ def main():
     # Reproducibility
     basf2.set_random_seed(12345)
 
+    # Add custom CDC geometry through a payload (from cdc-utilities repo)
+    # FIXME: Prepend a local payload for custom CDC geometry
+    basf2.conditions.prepend_testing_payloads("localdb/database.txt")
+
     # Steering Path
     main = basf2.Path()
 
     # MCri settings, chose exp number 0/1003/1004 and run number 0.
+    # FIXME: How to handle exp, and run numbers?
+
     main.add_module("EventInfoSetter", evtNumList=[
                     1000], expList=[0], runList=[0])
 

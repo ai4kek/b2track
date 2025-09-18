@@ -139,7 +139,8 @@ def trial_objective(config, worker_id=None):
 def main():
     """Parse arguments, initialize CSV, run Ray Tune optimization with Optuna, and report best parameters."""
     # Parse arguments
-    parser = argparse.ArgumentParser(description="Ray Tune + Optuna Optimization.")
+    parser = argparse.ArgumentParser(
+        description="Ray Tune + Optuna Optimization.")
     parser.add_argument(
         "--trials", type=int, default=MAX_TRIALS, help="Number of trials to run"
     )
@@ -149,7 +150,8 @@ def main():
     parser.add_argument(
         "--seed", type=int, default=RANDOM_SEED, help="Random seed for reproducibility"
     )
-    parser.add_argument("--slurm", action="store_true", help="Run in Slurm mode")
+    parser.add_argument("--slurm", action="store_true",
+                        help="Run in Slurm mode")
     args = parser.parse_args()
 
     # Initialize Ray (with Slurm settings if needed)
@@ -167,7 +169,8 @@ def main():
 
     # Create search space for Ray Tune with Optuna
     # Each parameter is a categorical choice from the PARAM_SPACE list
-    search_space = {param: tune.choice(values) for param, values in PARAM_SPACE.items()}
+    search_space = {param: tune.choice(values)
+                    for param, values in PARAM_SPACE.items()}
 
     # Configure ASHA scheduler for early stopping
     scheduler = ASHAScheduler(
@@ -185,7 +188,8 @@ def main():
     )
 
     # Run optimization
-    print(f"\n[INFO] Starting Ray Tune + Optuna optimization with {args.trials} trials")
+    print(
+        f"\n[INFO] Starting Ray Tune + Optuna optimization with {args.trials} trials")
     analysis = tune.run(
         trial_objective,
         search_alg=optuna_search,

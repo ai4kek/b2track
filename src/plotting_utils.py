@@ -55,7 +55,8 @@ def merge_worker_metrics(metrics_fields, output_file="metrics_all.csv"):
 
                 # Verify the file has the expected structure
                 if not set(metrics_fields).issubset(set(reader.fieldnames or [])):
-                    logger.warning(f"Skipping {worker_file}: missing required columns")
+                    logger.warning(
+                        f"Skipping {worker_file}: missing required columns")
                     continue
 
                 file_rows = list(reader)
@@ -77,7 +78,8 @@ def merge_worker_metrics(metrics_fields, output_file="metrics_all.csv"):
 
     # Sort by worker_id and trial_number if present
     all_rows.sort(
-        key=lambda x: (int(x.get("worker_id", 0)), int(x.get("trial_number", 0)))
+        key=lambda x: (int(x.get("worker_id", 0)),
+                       int(x.get("trial_number", 0)))
     )
 
     with Path(output_file).open("w", newline="") as f:
@@ -161,7 +163,8 @@ def extract_reference_results(df):
     df_match = df[mask]
 
     if df_match.empty:
-        logger.warning(f"No row found in DataFrame matching REF_PARAM: {REF_PARAM}")
+        logger.warning(
+            f"No row found in DataFrame matching REF_PARAM: {REF_PARAM}")
         return None
 
     # Use the first matching row
@@ -227,7 +230,8 @@ def plot_efficiency_vs_purity_f1(df, best_results=None, ref_results=None):
             (best["efficiency"], best["purity"]),
             xytext=(-50, 10),
             textcoords="offset points",
-            bbox=dict(boxstyle="round,pad=0.3", fc="white", ec="red", alpha=0.8),
+            bbox=dict(boxstyle="round,pad=0.3",
+                      fc="white", ec="red", alpha=0.8),
             color="red",
         )
 
@@ -250,7 +254,8 @@ def plot_efficiency_vs_purity_f1(df, best_results=None, ref_results=None):
             (ref["efficiency"], ref["purity"]),
             xytext=(-50, 10),
             textcoords="offset points",
-            bbox=dict(boxstyle="round,pad=0.3", fc="white", ec="blue", alpha=0.8),
+            bbox=dict(boxstyle="round,pad=0.3",
+                      fc="white", ec="blue", alpha=0.8),
             color="blue",
         )
 
@@ -319,7 +324,8 @@ def plot_efficiency_vs_purity_time(df, best_results=None, ref_results=None):
                 (metrics["efficiency"], metrics["purity"]),
                 xytext=(-50, 10),
                 textcoords="offset points",
-                bbox=dict(boxstyle="round,pad=0.3", fc="white", ec="red", alpha=0.8),
+                bbox=dict(boxstyle="round,pad=0.3",
+                          fc="white", ec="red", alpha=0.8),
                 color="red",
             )
 
@@ -342,7 +348,8 @@ def plot_efficiency_vs_purity_time(df, best_results=None, ref_results=None):
             (metrics["efficiency"], metrics["purity"]),
             xytext=(-50, 10),
             textcoords="offset points",
-            bbox=dict(boxstyle="round,pad=0.3", fc="white", ec="blue", alpha=0.8),
+            bbox=dict(boxstyle="round,pad=0.3",
+                      fc="white", ec="blue", alpha=0.8),
             color="blue",
         )
 
@@ -385,7 +392,7 @@ class ParameterPlotter:
         os.makedirs(save_dir, exist_ok=True)
         if len(self.param_columns) >= 2 and len(self.df) >= 4:
             for i, param1 in enumerate(self.param_columns[:-1]):
-                for param2 in self.param_columns[i + 1 :]:
+                for param2 in self.param_columns[i + 1:]:
                     try:
                         if (
                             self.df[param1].nunique() <= 1
@@ -456,7 +463,8 @@ class ParameterPlotter:
                             ax.legend()
                         fig.tight_layout()
                         fig.savefig(
-                            os.path.join(save_dir, f"heatmap_{param1}_vs_{param2}.png"),
+                            os.path.join(
+                                save_dir, f"heatmap_{param1}_vs_{param2}.png"),
                             dpi=300,
                         )
                         plt.close(fig)
@@ -497,7 +505,8 @@ class ParameterPlotter:
                         try:
                             val = float(result["parameters"][param])
                             f1 = float(result["metrics"]["f1"])
-                            idx = list(sorted(plot_df[param].unique())).index(val)
+                            idx = list(
+                                sorted(plot_df[param].unique())).index(val)
                             ax.scatter(
                                 [idx],
                                 [f1],
@@ -534,4 +543,5 @@ class ParameterPlotter:
                 )
                 plt.close(fig)
             except Exception as e:
-                logger.warning(f"Could not create violin plot for {param}: {e}")
+                logger.warning(
+                    f"Could not create violin plot for {param}: {e}")

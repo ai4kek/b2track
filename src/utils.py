@@ -25,7 +25,8 @@ def save_params_to_csv(
     # Gather output data in table
     output = []
     if print_values:
-        headers = ["Parameter", "Type", "Default", "Current", "Steering", "Description"]
+        headers = ["Parameter", "Type", "Default",
+                   "Current", "Steering", "Description"]
     else:
         headers = ["Parameter", "Type", "Default", "Description"]
 

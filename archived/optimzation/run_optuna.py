@@ -126,7 +126,8 @@ def run_tracking_with_params(params, trial_number, worker_id=None):
 def trial_objective(trial):
     """Sample parameters using Optuna, run tracking, and return F1 score for maximization."""
     # Sample parameters for the trial
-    params = {k: trial.suggest_categorical(k, v) for k, v in PARAM_SPACE.items()}
+    params = {k: trial.suggest_categorical(
+        k, v) for k, v in PARAM_SPACE.items()}
     trial_number = trial.number
 
     # Run tracking and get F1 score
@@ -152,7 +153,8 @@ def main():
     parser.add_argument(
         "--seed", type=int, default=RANDOM_SEED, help="Random seed for reproducibility"
     )
-    parser.add_argument("--slurm", action="store_true", help="Run in Slurm mode")
+    parser.add_argument("--slurm", action="store_true",
+                        help="Run in Slurm mode")
     args = parser.parse_args()
 
     # Handle Slurm array job
@@ -166,7 +168,8 @@ def main():
         start_trial = job_id * trials_per_job
         end_trial = start_trial + trials_per_job if job_id < n_jobs - 1 else args.trials
 
-        print(f"[INFO] Job {job_id} handling trials {start_trial} to {end_trial-1}")
+        print(
+            f"[INFO] Job {job_id} handling trials {start_trial} to {end_trial-1}")
 
         # Initialize worker metrics
         init_metrics_csv(job_id)
@@ -233,7 +236,8 @@ def main():
     for k, v in study.best_params.items():
         print(f"  {k}: {v}")
     print(f"\n🏆 Best F1 Score: {study.best_value:.4f}")
-    print(f"\nTo view results in dashboard, run: optuna-dashboard {SQLITE_PATH}\n")
+    print(
+        f"\nTo view results in dashboard, run: optuna-dashboard {SQLITE_PATH}\n")
 
 
 # --- Entry Point ---
