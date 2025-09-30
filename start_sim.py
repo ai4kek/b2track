@@ -54,18 +54,16 @@ def main():
     # Reproducibility
     basf2.set_random_seed(12345)
 
-    # Add custom CDC geometry through a payload (from cdc-utilities repo)
-    # FIXME: Prepend a local payload for custom CDC geometry
+    # Add custom CDC geometry through a payload (from cdc-utilities
+    # repository). Prepend a local payload for custom CDC geometry
     basf2.conditions.prepend_testing_payloads("localdb/database.txt")
 
     # Steering Path
     main = basf2.Path()
 
-    # MCri settings, chose exp number 0/1003/1004 and run number 0.
-    # FIXME: How to handle exp, and run numbers?
-
+    # For MCrd, use exp # 35 and any run no. > 1500, special payload needed.
     main.add_module("EventInfoSetter", evtNumList=[
-                    1000], expList=[0], runList=[0])
+                    1000], expList=[35], runList=[1853])
 
     # MC sample: 'mixed' (BBbar), 'charged' (B+B-), 'mu+mu-' (dimuon), 'tau+tau-'
 
@@ -87,16 +85,16 @@ def main():
         raise ValueError(f"Unknown finalstate: {args.finalstate}.")
 
     # Add simulated beam background
-    bkg_files = background.get_background_files(
-        folder=None,  # None >> BELLE2_BACKGROUND_DIR, or set otherwise
-        output_file_info=True,
-    )
+    # bkg_files = background.get_background_files(
+    #    folder=None,  # None >> BELLE2_BACKGROUND_DIR, or set otherwise
+    #    output_file_info=True,
+    # )
 
     # Add simulation
     si.add_simulation(
         path=main,
         components=None,
-        bkgfiles=bkg_files,  # to add background set bkgfiles=bkg_files
+        bkgfiles=None,  # to add background set bkgfiles=bkg_files
         bkgOverlay=True,
     )
 
