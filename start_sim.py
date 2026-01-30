@@ -56,14 +56,14 @@ def main():
 
     # Add custom CDC geometry through a payload (from cdc-utilities
     # repository). Prepend a local payload for custom CDC geometry
-    basf2.conditions.prepend_testing_payloads("localdb/database.txt")
+    basf2.conditions.prepend_testing_payloads("./localdb/database.txt")
 
     # Steering Path
     main = basf2.Path()
 
     # For MCrd, use exp # 35 and any run no. > 1500, special payload needed.
     main.add_module("EventInfoSetter", evtNumList=[
-                    1000], expList=[35], runList=[1853])
+                    100]) # , expList=[35], runList=[1853])
 
     # MC sample: 'mixed' (BBbar), 'charged' (B+B-), 'mu+mu-' (dimuon), 'tau+tau-'
 
