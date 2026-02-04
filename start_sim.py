@@ -63,7 +63,7 @@ def main():
 
     # For MCrd, use exp # 35 and any run no. > 1500, special payload needed.
     main.add_module("EventInfoSetter", evtNumList=[
-                    100]) # , expList=[35], runList=[1853])
+                    1000]) # , expList=[35], runList=[1853])
 
     # MC sample: 'mixed' (BBbar), 'charged' (B+B-), 'mu+mu-' (dimuon), 'tau+tau-'
 
@@ -88,6 +88,11 @@ def main():
     # bkg_files = background.get_background_files(
     #    folder=None,  # None >> BELLE2_BACKGROUND_DIR, or set otherwise
     #    output_file_info=True,
+    # )
+
+    # Or, add run-dependent backgroud, on KEKCC
+    # bkg_files = glob.glob(
+    #    "/group/belle2/dataprod/BGOverlay/BGOrd/rel8/BGOExp35rel8/release-08-02-05/e0035/4S/r01853/beambg/sub*/*"
     # )
 
     # Add simulation
