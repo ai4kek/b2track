@@ -56,9 +56,9 @@ METRICS_FIELDS = [
     # Parameters first (dynamic based on PARAM_SPACE)
     *list(PARAM_SPACE.keys()),
     # Then metrics
-    "efficiency",
-    "purity",
-    "f1",
+    "hit_efficiency",
+    "hit_purity",
+    "hit_f1",
     "finalstate",
     # Then execution info
     "execution_time",
@@ -293,9 +293,9 @@ def run_tracking_with_params(
                 # Fill with default/failure values
                 row = {
                     **params,
-                    "efficiency": "0.0000",
-                    "purity": "0.0000",
-                    "f1": "0.0000",
+                    "hit_efficiency": "0.0000",
+                    "hit_purity": "0.0000",
+                    "hit_f1": "0.0000",
                     "finalstate": "failed",
                     "execution_time": "",
                     "worker_id": "",

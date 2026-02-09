@@ -137,9 +137,9 @@ class TrackEvaluation(b2.Module):
         # Header order
         field_order = [
             *list(self.params.keys()),  # Parameters first
-            "efficiency",
-            "purity",
-            "f1",
+            "hit_efficiency",
+            "hit_purity",
+            "hit_f1",
             "finalstate",  # Then metrics
             "execution_time",
             "worker_id",
@@ -149,9 +149,9 @@ class TrackEvaluation(b2.Module):
         # Add metrics
         row = {
             **self.params,  # Parameters from JSON
-            "efficiency": f"{hit_eff_mean:.4f}",  # Efficiency
-            "purity": f"{hit_pur_mean:.4f}",  # Purity
-            "f1": f"{f1_score:.4f}",  # F1 score
+            "hit_efficiency": f"{hit_eff_mean:.4f}",  # Efficiency
+            "hit_purity": f"{hit_pur_mean:.4f}",  # Purity
+            "hit_f1": f"{f1_score:.4f}",  # F1 score
             "finalstate": self.finalstate,  # Final state
             "execution_time": "",  # Left empty for optimization scripts
             "worker_id": "",  # Left empty for optimization scripts

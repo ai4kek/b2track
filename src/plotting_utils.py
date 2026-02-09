@@ -3,7 +3,7 @@
 """
 Belle II Tracking Parameter Analysis
 
-This script analyzes the results of grid search optimization from run_scipy_grid.py.
+This script analyzes the results of grid search optimization from run_grid.py.
 It merges worker metrics, extracts best results, and creates visualizations.
 """
 import csv
@@ -97,9 +97,9 @@ def extract_results_from_row(row):
         for f in row.index
         if f
         not in [
-            "efficiency",
-            "purity",
-            "f1",
+            "hit_efficiency",
+            "hit_purity",
+            "hit_f1",
             "finalstate",
             "execution_time",
             "worker_id",
@@ -109,10 +109,10 @@ def extract_results_from_row(row):
     return {
         "parameters": {k: row[k] for k in param_fields},
         "metrics": {
-            "f1": float(row.get("f1", 0)),
-            "efficiency": float(row.get("efficiency", 0)),
-            "purity": float(row.get("purity", 0)),
-            "finalstate": row.get("finalstate", ""),
+            "hit_efficiency": float(row.get("hit_efficiency", 0)),
+            "hit_purity": float(row.get("hit_purity", 0)),
+            "hit_f1": float(row.get("hit_f1", 0)),
+            "finalstate": row.get("finalstate", "failed"),
         },
         "execution": {
             "worker_id": int(row.get("worker_id", 0)),
@@ -135,13 +135,13 @@ def extract_best_results(df):
     """Extract the best results (highest F1) from the DataFrame and save to JSON."""
     logger.info("Extracting best results from DataFrame")
 
-    df_valid = df[pd.to_numeric(df["f1"], errors="coerce") >= 0].copy()
+    df_valid = df[pd.to_numeric(df["hit_f1"], errors="coerce") >= 0].copy()
     if df_valid.empty:
         logger.warning("No valid rows with F1 scores found in DataFrame")
         return None
 
     # Find the row with the highest F1 score
-    best_row = df_valid.loc[df_valid["f1"].idxmax()]
+    best_row = df_valid.loc[df_valid["hit_f1"].idxmax()]
     result = extract_results_from_row(best_row)
 
     # Save to JSON
@@ -189,21 +189,21 @@ def plot_efficiency_vs_purity_f1(df, best_results=None, ref_results=None):
 
     plot_df = pd.DataFrame(
         {
-            "efficiency": pd.to_numeric(df["efficiency"], errors="coerce"),
-            "purity": pd.to_numeric(df["purity"], errors="coerce"),
-            "f1": pd.to_numeric(df["f1"], errors="coerce"),
+            "hit_efficiency": pd.to_numeric(df["hit_efficiency"], errors="coerce"),
+            "hit_purity": pd.to_numeric(df["hit_purity"], errors="coerce"),
+            "hit_f1": pd.to_numeric(df["hit_f1"], errors="coerce"),
         }
     ).dropna()
 
     fig, ax = plt.subplots(figsize=(10, 8))
 
-    norm = plt.Normalize(plot_df["f1"].min(), plot_df["f1"].max())
+    norm = plt.Normalize(plot_df["hit_f1"].min(), plot_df["hit_f1"].max())
     cmap = plt.get_cmap("plasma")
 
     sc = ax.scatter(
-        plot_df["efficiency"],
-        plot_df["purity"],
-        c=plot_df["f1"],
+        plot_df["hit_efficiency"],
+        plot_df["hit_purity"],
+        c=plot_df["hit_f1"],
         cmap=cmap,
         norm=norm,
         s=50,
@@ -211,23 +211,23 @@ def plot_efficiency_vs_purity_f1(df, best_results=None, ref_results=None):
         label=None,
     )
 
-    # Best result (red circle)
+    # Optimal result (red circle)
     if best_results is not None:
         best = best_results["metrics"]
         best_execution = best_results["execution"]
         ax.scatter(
-            [best["efficiency"]],
-            [best["purity"]],
+            [best["hit_efficiency"]],
+            [best["hit_purity"]],
             s=100,
             facecolors="none",
             edgecolors="red",
             linewidths=2,
             zorder=11,
-            label=f"Best (f1: {best['f1']:.3f}, t: {best_execution['execution_time']:.2f}s)",
+            label=f"Best (f1: {best['hit_f1']:.3f}, t: {best_execution['execution_time']:.2f}s)",
         )
         ax.annotate(
-            f"f1: {best['f1']:.3f}",
-            (best["efficiency"], best["purity"]),
+            f"f1: {best['hit_f1']:.3f}",
+            (best["hit_efficiency"], best["hit_purity"]),
             xytext=(-50, 10),
             textcoords="offset points",
             bbox=dict(boxstyle="round,pad=0.3",
@@ -240,18 +240,18 @@ def plot_efficiency_vs_purity_f1(df, best_results=None, ref_results=None):
         ref = ref_results["metrics"]
         ref_execution = ref_results["execution"]
         ax.scatter(
-            [ref["efficiency"]],
-            [ref["purity"]],
+            [ref["hit_efficiency"]],
+            [ref["hit_purity"]],
             s=100,
             facecolors="none",
             edgecolors="blue",
             linewidths=2,
             zorder=11,
-            label=f"Reference (f1: {ref['f1']:.3f}, t: {ref_execution['execution_time']:.2f}s)",
+            label=f"Reference (f1: {ref['hit_f1']:.3f}, t: {ref_execution['execution_time']:.2f}s)",
         )
         ax.annotate(
-            f"f1: {ref['f1']:.3f}",
-            (ref["efficiency"], ref["purity"]),
+            f"f1: {ref['hit_f1']:.3f}",
+            (ref["hit_efficiency"], ref["hit_purity"]),
             xytext=(-50, 10),
             textcoords="offset points",
             bbox=dict(boxstyle="round,pad=0.3",
@@ -260,8 +260,8 @@ def plot_efficiency_vs_purity_f1(df, best_results=None, ref_results=None):
         )
 
     ax.set_title("Hit Efficiency vs Hit Purity (F1 Score)")
-    ax.set_xlabel("Efficiency")
-    ax.set_ylabel("Purity")
+    ax.set_xlabel("Hit Efficiency")
+    ax.set_ylabel("Hit Purity")
     ax.grid(True, alpha=0.3)
     fig.colorbar(sc, ax=ax, label="F1 Score")
     ax.legend()
@@ -280,8 +280,8 @@ def plot_efficiency_vs_purity_time(df, best_results=None, ref_results=None):
 
     plot_df = pd.DataFrame(
         {
-            "efficiency": pd.to_numeric(df["efficiency"], errors="coerce"),
-            "purity": pd.to_numeric(df["purity"], errors="coerce"),
+            "hit_efficiency": pd.to_numeric(df["hit_efficiency"], errors="coerce"),
+            "hit_purity": pd.to_numeric(df["hit_purity"], errors="coerce"),
             "execution_time": pd.to_numeric(df["execution_time"], errors="coerce"),
         }
     ).dropna()
@@ -294,8 +294,8 @@ def plot_efficiency_vs_purity_time(df, best_results=None, ref_results=None):
     cmap = plt.get_cmap("plasma")
 
     sc = ax.scatter(
-        plot_df["efficiency"],
-        plot_df["purity"],
+        plot_df["hit_efficiency"],
+        plot_df["hit_purity"],
         c=plot_df["execution_time"],
         cmap=cmap,
         norm=norm,
@@ -310,8 +310,8 @@ def plot_efficiency_vs_purity_time(df, best_results=None, ref_results=None):
         metrics = best_results.get("metrics", {})
         if metrics and best:
             ax.scatter(
-                [metrics["efficiency"]],
-                [metrics["purity"]],
+                [metrics["hit_efficiency"]],
+                [metrics["hit_purity"]],
                 s=100,
                 facecolors="none",
                 edgecolors="red",
@@ -321,7 +321,7 @@ def plot_efficiency_vs_purity_time(df, best_results=None, ref_results=None):
             )
             ax.annotate(
                 f"t: {best['execution_time']:.2f}s",
-                (metrics["efficiency"], metrics["purity"]),
+                (metrics["hit_efficiency"], metrics["hit_purity"]),
                 xytext=(-50, 10),
                 textcoords="offset points",
                 bbox=dict(boxstyle="round,pad=0.3",
@@ -334,8 +334,8 @@ def plot_efficiency_vs_purity_time(df, best_results=None, ref_results=None):
         ref = ref_results["execution"] if "execution" in ref_results else {}
         metrics = ref_results["metrics"]
         ax.scatter(
-            [metrics["efficiency"]],
-            [metrics["purity"]],
+            [metrics["hit_efficiency"]],
+            [metrics["hit_purity"]],
             s=100,
             facecolors="none",
             edgecolors="blue",
@@ -345,7 +345,7 @@ def plot_efficiency_vs_purity_time(df, best_results=None, ref_results=None):
         )
         ax.annotate(
             f"t: {ref['execution_time']:.2f}s",
-            (metrics["efficiency"], metrics["purity"]),
+            (metrics["hit_efficiency"], metrics["hit_purity"]),
             xytext=(-50, 10),
             textcoords="offset points",
             bbox=dict(boxstyle="round,pad=0.3",
@@ -374,9 +374,9 @@ class ParameterPlotter:
             for col in self.df.columns
             if col
             not in [
-                "efficiency",
-                "purity",
-                "f1",
+                "hit_efficiency",
+                "hit_purity",
+                "hit_f1",
                 "finalstate",
                 "execution_time",
                 "worker_id",
@@ -400,7 +400,7 @@ class ParameterPlotter:
                         ):
                             continue
                         pivot = self.df.pivot_table(
-                            index=param1, columns=param2, values="f1", aggfunc="mean"
+                            index=param1, columns=param2, values="hit_f1", aggfunc="mean"
                         )
                         fig, ax = plt.subplots(figsize=(10, 8))
                         sns.heatmap(
@@ -482,15 +482,15 @@ class ParameterPlotter:
         os.makedirs(save_dir, exist_ok=True)
         for param in self.param_columns:
             try:
-                plot_df = self.df[[param, "f1"]].dropna()
+                plot_df = self.df[[param, "hit_f1"]].dropna()
                 fig, ax = plt.subplots(figsize=(10, 6))
                 sns.violinplot(
-                    x=param, y="f1", data=plot_df, inner="quartile", color="lightgray"
+                    x=param, y="hit_f1", data=plot_df, inner="quartile", color="lightgray"
                 )
                 # Overlay individual data points
                 sns.stripplot(
                     x=param,
-                    y="f1",
+                    y="hit_f1",
                     data=plot_df,
                     color="black",
                     size=4,
@@ -504,7 +504,7 @@ class ParameterPlotter:
                     if result and param in result.get("parameters", {}):
                         try:
                             val = float(result["parameters"][param])
-                            f1 = float(result["metrics"]["f1"])
+                            f1 = float(result["metrics"]["hit_f1"])
                             idx = list(
                                 sorted(plot_df[param].unique())).index(val)
                             ax.scatter(
