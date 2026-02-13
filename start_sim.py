@@ -10,9 +10,9 @@
 ##########################################################################
 
 import argparse
-import background
 import glob as glob
 import basf2 as b2
+import background as bg
 import generators as ge
 import simulation as si
 
@@ -77,22 +77,22 @@ def main():
         raise ValueError(f"Unknown finalstate: {args.finalstate}.")
 
     # Add simulated beam background
-    bg_files = bkg.get_background_files(
-        folder=None,  # None >> BELLE2_BACKGROUND_DIR, or set otherwise
-        output_file_info=True,
-    )
+    # bg_sim = bg.get_background_files(
+    #    folder=None,  # None >> BELLE2_BACKGROUND_DIR, or set otherwise
+    #    output_file_info=True,
+    # )
 
     # Add run-dependent backgroud
     bg = glob.glob("./*.root")
-    bg_files = glob.glob(
-        "/group/belle2/dataprod/BGOverlay/BGOrd/rel8/BGOExp35rel8/release-08-02-05/e0035/4S/r01853/beambg/sub*/*"
+    bg_run = glob.glob(
+       "/group/belle2/dataprod/BGOverlay/BGOrd/rel8/BGOExp35rel8/release-08-02-05/e0035/4S/r01853/beambg/sub*/*"
     )
 
     # Add simulation
     si.add_simulation(
         path=main,
         components=None,
-        bkgfiles=None,  # add background files here
+        bkgfiles=None,  # add background files here: bg_sim or bg_run
         bkgOverlay=True,
     )
 
