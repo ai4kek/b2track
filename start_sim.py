@@ -16,6 +16,7 @@ import basf2 as b2
 import generators as ge
 import simulation as si
 
+# run w/ defaults: basf2 start_sim.py 2>&1 | tee "dataset/mixed_sim.log"
 
 def parse_args():
     parser = argparse.ArgumentParser(
@@ -75,11 +76,23 @@ def main():
     else:
         raise ValueError(f"Unknown finalstate: {args.finalstate}.")
 
+    # Add simulated beam background
+    bg_files = bkg.get_background_files(
+        folder=None,  # None >> BELLE2_BACKGROUND_DIR, or set otherwise
+        output_file_info=True,
+    )
+
+    # Add run-dependent backgroud
+    bg = glob.glob("./*.root")
+    bg_files = glob.glob(
+        "/group/belle2/dataprod/BGOverlay/BGOrd/rel8/BGOExp35rel8/release-08-02-05/e0035/4S/r01853/beambg/sub*/*"
+    )
+
     # Add simulation
     si.add_simulation(
         path=main,
         components=None,
-        bkgfiles=None,
+        bkgfiles=None,  # add background files here
         bkgOverlay=True,
     )
 

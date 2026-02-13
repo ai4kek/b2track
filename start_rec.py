@@ -16,6 +16,7 @@ import mdst as mdst
 import tracking as tr
 from src.utils import print_module_params
 
+# run w/ defaults: basf2 start_rec.py 2>&1 | tee "dataset/mixed_rec.log"
 
 def parse_args():
     parser = argparse.ArgumentParser(
