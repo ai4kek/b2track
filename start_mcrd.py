@@ -90,7 +90,7 @@ def main():
     main.add_module("RootOutput", outputFileName=args.output)
 
     # Print modules in path
-    # b2.print_path(main)
+    b2.print_path(main)
 
     # Run event loop
     b2.process(main)

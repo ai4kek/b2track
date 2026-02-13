@@ -63,7 +63,11 @@ def main():
         skipGeometryAdding=False,
     )
 
-    # Pass args to ToCDCCKF if provided
+    # Inject parameters into TFCDC_WireHitPreparer
+    # basf2.set_module_parameters(
+    #    main, "TFCDC_WireHitPreparer", useSuperLayers=[0,1,2,5,6,7,8])
+
+    # Inject parameters to ToCDCCKF
     if args.params is not None:
 
         # Load ToCDCCKF parameters from JSON file
@@ -94,11 +98,8 @@ def main():
         # additionalBranches=additional_br,
     )
 
-    # Save all dataobjects
-    # main.add_module("RootOutput", outputFileName=f"{args.output}")
-
     # Print modules in path
-    # b2.print_path(main)
+    b2.print_path(main)
 
     # Run event loop
     b2.process(main)

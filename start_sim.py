@@ -48,7 +48,7 @@ def main():
     b2.conditions.append_globaltag("data_prompt_rel08")
     b2.conditions.append_globaltag("online")
 
-    # FIXME (1): Custom CDC geometry through a payload (c.f. cdc-utilities)
+    # FIXME: Custom CDC geometry through a payload (c.f. cdc-utilities)
     # Payload is created using: exp=35, run=1853, global_tag='online'
     # b2.conditions.prepend_testing_payloads("./localdb/database.txt")
 
@@ -75,35 +75,19 @@ def main():
     else:
         raise ValueError(f"Unknown finalstate: {args.finalstate}.")
 
-    # Add simulated beam background
-    # bg_files = background.get_background_files(
-    #    folder=None,  # None >> BELLE2_BACKGROUND_DIR, or set otherwise
-    #    output_file_info=True,
-    # )
-
-    # Or, add run-dependent backgroud
-    bg_local = glob.glob(
-        "/group/belle2/dataprod/BGOverlay/BGOrd/rel8/BGOExp35rel8/release-08-02-05/e0035/4S/r01853/beambg/sub*/*"
-    )
-
     # Add simulation
     si.add_simulation(
         path=main,
         components=None,
-        bkgfiles=None,  # to add background set bkgfiles=bg_files
+        bkgfiles=None,
         bkgOverlay=True,
     )
-
-    # FIXME (2): Custom CDC geometry through TFCDC_WireHitPreparer
-    # sl_to_use = [0, 1, 2, 5, 6, 7, 8, 9]
-    # basf2.set_module_parameters(
-    #    main, name="TFCDC_WireHitPreparer", useSuperLayers=sl_to_use)
 
     # Save all dataobjects
     main.add_module("RootOutput", outputFileName=args.output)
 
     # Print modules in path
-    # b2.print_path(main)
+    b2.print_path(main)
 
     # Run event loop
     b2.process(main)

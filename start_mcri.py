@@ -78,7 +78,7 @@ def main():
         raise ValueError(f"Unknown finalstate: {args.finalstate}.")
 
     # Add simulated beam background
-    bkg_files = bkg.get_background_files(
+    bg_files = bkg.get_background_files(
         folder=None,  # None >> BELLE2_BACKGROUND_DIR, or set otherwise
         output_file_info=True,
     )
@@ -87,7 +87,7 @@ def main():
     si.add_simulation(
         path=main,
         components=None,
-        bkgfiles=bkg_files,  # to add background set bkgfiles=bkg_files
+        bkgfiles=bg_files,  # to add background set bkgfiles=bg_files
         bkgOverlay=True,
     )
 
@@ -95,7 +95,7 @@ def main():
     main.add_module("RootOutput", outputFileName=args.output)
 
     # Print modules in path
-    # b2.print_path(main)
+    b2.print_path(main)
 
     # Run event loop
     b2.process(main)
