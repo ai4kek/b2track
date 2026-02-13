@@ -49,6 +49,10 @@ def main():
     # Reproducibility
     b2.set_random_seed(12345)
 
+    # FIXME: Custom CDC geometry through a payload (c.f. cdc-utilities)
+    # Payload is created using: exp=35, run=1853, global_tag='online'
+    # b2.conditions.prepend_testing_payloads("./localdb/database.txt")
+
     # Steering Path
     main = b2.Path()
 
@@ -65,7 +69,7 @@ def main():
     )
 
     # Inject parameters into TFCDC_WireHitPreparer
-    # basf2.set_module_parameters(
+    # b2.set_module_parameters(
     #    main, "TFCDC_WireHitPreparer", useSuperLayers=[0,1,2,5,6,7,8])
 
     # Inject parameters to ToCDCCKF
