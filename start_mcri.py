@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 
 ##########################################################################
 # basf2 (Belle II Analysis Software Framework)                           #
@@ -21,11 +22,9 @@ Run-independent (MC16ri) | Run-dependent (MC16rd)
 # TODO: How to visualize wire efficiency map of CDC for an experiment?
 # TODO: How to switch on-off some parts of the CDC?
 
-
 import argparse
-
-import background
-import basf2
+import background as bkg
+import basf2 as b2
 import generators as ge
 import simulation as si
 
@@ -34,7 +33,6 @@ def parse_args():
     parser = argparse.ArgumentParser(
         description="Run-independent MC (similar to MC16ri samples)."
     )
-
     parser.add_argument(
         "--output",
         type=str,
@@ -54,16 +52,13 @@ def main():
     args = parse_args()
 
     # Reproducibility
-    basf2.set_random_seed(12345)
+    b2.set_random_seed(12345)
 
     # Steering Path
-    main = basf2.Path()
+    main = b2.Path()
 
-    # MCri settings, chose exp number 0/1003/1004 and run number 0.
-    main.add_module("EventInfoSetter", evtNumList=[
-                    1000], expList=[0], runList=[0])
-
-    # MC sample: 'mixed' (BBbar), 'charged' (B+B-), 'mu+mu-' (dimuon), 'tau+tau-'
+    # MCri settings, choose exp number 0/1003/1004 and run number 0
+    main.add_module("EventInfoSetter", evtNumList=[1000], expList=[0], runList=[0])
 
     # Add EvtGen generator
     if args.finalstate in ["mixed", "charged"]:
@@ -83,7 +78,7 @@ def main():
         raise ValueError(f"Unknown finalstate: {args.finalstate}.")
 
     # Add simulated beam background
-    bkg_files = background.get_background_files(
+    bkg_files = bkg.get_background_files(
         folder=None,  # None >> BELLE2_BACKGROUND_DIR, or set otherwise
         output_file_info=True,
     )
@@ -100,11 +95,11 @@ def main():
     main.add_module("RootOutput", outputFileName=args.output)
 
     # Print modules in path
-    # basf2.print_path(main)
+    # b2.print_path(main)
 
     # Run event loop
-    basf2.process(main)
-    # print(basf2.statistics)
+    b2.process(main)
+    # print(b2.statistics)
 
 
 if __name__ == "__main__":

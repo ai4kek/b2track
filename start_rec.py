@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 
 ##########################################################################
 # basf2 (Belle II Analysis Software Framework)                           #
@@ -10,11 +11,9 @@
 
 import argparse
 import json
-
-import basf2
-import mdst
-import tracking
-
+import basf2 as b2
+import mdst as mdst
+import tracking as tr
 from src.utils import print_module_params
 
 
@@ -47,16 +46,16 @@ def main():
     args = parse_args()
 
     # Reproducibility
-    basf2.set_random_seed(12345)
+    b2.set_random_seed(12345)
 
     # Steering Path
-    main = basf2.Path()
+    main = b2.Path()
 
-    # Add simulated data: 'mixed', 'charged', and 'mu+mu-' samples
+    # Add simulated data
     main.add_module("RootInput", inputFileName=args.input)
 
     # Add full tracking reconstuction
-    tracking.add_tracking_reconstruction(
+    tr.add_tracking_reconstruction(
         path=main,
         components=None,
         pruneTracks=False,
@@ -72,10 +71,10 @@ def main():
             params = json.load(f)
 
         # Inject parameters into ToCDCCKF
-        basf2.set_module_parameters(
+        b2.set_module_parameters(
             main, name="ToCDCCKF", recursive=True, **params)
 
-        # Print new prameters, don't use basf2.print_params() rather use this wrapper
+        # Print new prameters, don't use b2.print_params() rather use this wrapper
         print_module_params(main, "ToCDCCKF")
 
     # Save mDST dataobjects
@@ -99,11 +98,11 @@ def main():
     # main.add_module("RootOutput", outputFileName=f"{args.output}")
 
     # Print modules in path
-    # basf2.print_path(main)
+    # b2.print_path(main)
 
     # Run event loop
-    basf2.process(main)
-    # print(basf2.statistics)
+    b2.process(main)
+    # print(b2.statistics)
 
 
 if __name__ == "__main__":

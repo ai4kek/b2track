@@ -8,12 +8,11 @@
 # This file is licensed under LGPL-3.0, see LICENSE.md.                  #
 ##########################################################################
 
-###############################################################################
-# A more complex python module using matlotlib to create
-# advanced plots.
-# It gathers the x/y position off all CDCSimHits and draws them in different
-# colours depending on associated MCParticle.
-###############################################################################
+##########################################################################
+# A more complex python module using matlotlib to create advanced
+# plots. It gathers the x/y position off all CDCSimHits and draws
+# them in different colours depending on associated MCParticle.
+##########################################################################
 
 # flake8: noqa: F401
 # ruff: noqa: F401

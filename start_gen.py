@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 
 ##########################################################################
 # basf2 (Belle II Analysis Software Framework)                           #
@@ -9,50 +10,40 @@
 ##########################################################################
 
 import argparse
-
-import basf2
+import basf2 as b2
 import generators as ge
 
 
 def parse_args():
     parser = argparse.ArgumentParser(
-        description="Run SVD tracking with specified parameters"
+        description="Run-independent MC (similar to MC16ri samples)."
+    )
+    parser.add_argument(
+        "--output",
+        type=str,
+        default="dataset/mixed_gen.root",
+        help="Output ROOT file path (default: %(default)s)",
     )
     parser.add_argument(
         "--finalstate",
         type=str,
         default="mixed",
-        help="Final state type (default: mixed)",
+        help="Final state type (default: %(default)s)",
     )
-    parser.add_argument(
-        "--outputdir",
-        type=str,
-        default="dataset",
-        help="Output directory (default: dataset)",
-    )
-    # Handle both direct python and basf2 argument passing
-    try:
-        return parser.parse_args()
-    except SystemExit:
-        # If parsing fails (when run with python directly), return default values
-        return parser.parse_args([])
+    return parser.parse_args()
 
 
 def main():
     args = parse_args()
 
     # Reproducibility
-    basf2.set_random_seed(12345)
+    b2.set_random_seed(12345)
 
     # Steering Path
-    main = basf2.Path()
+    main = b2.Path()
 
-    # Set expList=[0] or [12] or custom, need a specific globaltag/payload.
-    # For run-independent Monte Carlo simulation set runList=[0] below.
-    main.add_module("EventInfoSetter", evtNumList=[
-                    1000], expList=[0], runList=[0])
-
-    # MC sample: 'mixed' (BBbar), 'charged' (B+B-), 'mu+mu-' (dimuon), 'tau+tau-'
+    # MCri settings, choose exp number 0/1003/1004 and run number 0
+    main.add_module("EventInfoSetter", evtNumList=[1000], expList=[0], runList=[0])
 
     # Add EvtGen generator
     if args.finalstate in ["mixed", "charged"]:
@@ -72,16 +63,14 @@ def main():
         raise ValueError(f"Unknown finalstate: {args.finalstate}.")
 
     # Save all dataobjects
-    main.add_module(
-        "RootOutput", outputFileName=f"{args.outputdir}/{args.finalstate}_gen.root"
-    )
+    main.add_module("RootOutput", outputFileName=args.output)
 
     # Print modules in path
-    # basf2.print_path(main)
+    # b2.print_path(main)
 
     # Run event loop
-    basf2.process(main)
-    # print(basf2.statistics)
+    b2.process(main)
+    # print(b2.statistics)
 
 
 if __name__ == "__main__":

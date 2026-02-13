@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 
 ##########################################################################
 # basf2 (Belle II Analysis Software Framework)                           #
@@ -8,23 +9,10 @@
 # This file is licensed under LGPL-3.0, see LICENSE.md.                  #
 ##########################################################################
 
-"""
-Run-independent (MC16ri) | Run-dependent (MC16rd)
-- simulated background   | - background overlay from data
-- exp 0 = nominal lumi   | - realistic detector conditions
-- exp 1003 = pre-LS1     | - produced with release-08-02 (Run 1)
-- exp 1004 = pre-LS2     | - produced with release-08-03 (Run 2)
-"""
-
-# TODO: How to visualize wire efficiency map of CDC for an experiment?
-# See "cdc-utilities" repository from Giaccomo from KIT to visualize CDC.
-# TODO: How to switch on-off some parts of the CDC?
-# See "cdc-utilities" repository from Giaccomo from KIT to visualize CDC.
-# TODO: How to prepend a globaltag? (see Section 5.4 of basf2 docs)
-
 import argparse
 import background
-import basf2
+import glob as glob
+import basf2 as b2
 import generators as ge
 import simulation as si
 
@@ -52,20 +40,23 @@ def main():
     args = parse_args()
 
     # Reproducibility
-    basf2.set_random_seed(12345)
+    b2.set_random_seed(12345)
 
-    # Add custom CDC geometry through a payload (from cdc-utilities
-    # repository). Prepend a local payload for custom CDC geometry
-    basf2.conditions.prepend_testing_payloads("./localdb/database.txt")
+    # Set database conditions (in addition to default) for MCrd
+    b2.conditions.override_globaltags()
+    b2.conditions.append_globaltag("mcrd_prompt_rel08")
+    b2.conditions.append_globaltag("data_prompt_rel08")
+    b2.conditions.append_globaltag("online")
+
+    # FIXME (1): Custom CDC geometry through a payload (c.f. cdc-utilities)
+    # Payload is created using: exp=35, run=1853, global_tag='online'
+    # b2.conditions.prepend_testing_payloads("./localdb/database.txt")
 
     # Steering Path
-    main = basf2.Path()
+    main = b2.Path()
 
-    # For MCrd, use exp # 35 and any run no. > 1500, special payload needed.
-    main.add_module("EventInfoSetter", evtNumList=[
-                    1000]) # , expList=[35], runList=[1853])
-
-    # MC sample: 'mixed' (BBbar), 'charged' (B+B-), 'mu+mu-' (dimuon), 'tau+tau-'
+    # For MCrd, use exp # 35 and run # 1853, special payload needed.
+    main.add_module("EventInfoSetter", evtNumList=[1000], expList=[35], runList=[1853])
 
     # Add EvtGen generator
     if args.finalstate in ["mixed", "charged"]:
@@ -85,33 +76,38 @@ def main():
         raise ValueError(f"Unknown finalstate: {args.finalstate}.")
 
     # Add simulated beam background
-    # bkg_files = background.get_background_files(
+    # bg_files = background.get_background_files(
     #    folder=None,  # None >> BELLE2_BACKGROUND_DIR, or set otherwise
     #    output_file_info=True,
     # )
 
-    # Or, add run-dependent backgroud, on KEKCC
-    # bkg_files = glob.glob(
-    #    "/group/belle2/dataprod/BGOverlay/BGOrd/rel8/BGOExp35rel8/release-08-02-05/e0035/4S/r01853/beambg/sub*/*"
-    # )
+    # Or, add run-dependent backgroud
+    bg_local = glob.glob(
+        "/group/belle2/dataprod/BGOverlay/BGOrd/rel8/BGOExp35rel8/release-08-02-05/e0035/4S/r01853/beambg/sub*/*"
+    )
 
     # Add simulation
     si.add_simulation(
         path=main,
         components=None,
-        bkgfiles=None,  # to add background set bkgfiles=bkg_files
+        bkgfiles=None,  # to add background set bkgfiles=bg_files
         bkgOverlay=True,
     )
+
+    # FIXME (2): Custom CDC geometry through TFCDC_WireHitPreparer
+    # sl_to_use = [0, 1, 2, 5, 6, 7, 8, 9]
+    # basf2.set_module_parameters(
+    #    main, name="TFCDC_WireHitPreparer", useSuperLayers=sl_to_use)
 
     # Save all dataobjects
     main.add_module("RootOutput", outputFileName=args.output)
 
     # Print modules in path
-    # basf2.print_path(main)
+    # b2.print_path(main)
 
     # Run event loop
-    basf2.process(main)
-    # print(basf2.statistics)
+    b2.process(main)
+    # print(b2.statistics)
 
 
 if __name__ == "__main__":

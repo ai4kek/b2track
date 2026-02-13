@@ -44,7 +44,7 @@ def main():
     # Set seed for reproducibility
     b2.set_random_seed(12345)
 
-    # Set database conditions (in addition to default)
+    # Set database conditions (in addition to default) for MCrd
     b2.conditions.override_globaltags()
     b2.conditions.append_globaltag("mcrd_prompt_rel08")
     b2.conditions.append_globaltag("data_prompt_rel08")
@@ -54,8 +54,7 @@ def main():
     main = b2.create_path()
 
     # For MCrd, use exp # 35 and any run number > 1500, special payload needed.
-    main.add_module("EventInfoSetter", evtNumList=[
-                    9528], expList=[35], runList=[1853])
+    main.add_module("EventInfoSetter", evtNumList=[9528], expList=[35], runList=[1853])
 
     # Events generator
     if args.finalstate in ["mixed", "charged"]:
@@ -73,11 +72,8 @@ def main():
     else:
         raise ValueError(f"Unknown finalstate: {args.finalstate}.")
 
-    # Add Background
-    # background (collision) files
+    # Add run-dependent backgroud
     bg = glob.glob("./*.root")
-
-    # if running locally e.g. on KEKCC/NAF clusters
     bg_local = glob.glob(
         "/group/belle2/dataprod/BGOverlay/BGOrd/rel8/BGOExp35rel8/release-08-02-05/e0035/4S/r01853/beambg/sub*/*"
     )
