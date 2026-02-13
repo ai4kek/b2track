@@ -75,6 +75,10 @@ def main():
         skipGeometryAdding=False,
     )
 
+    # Inject parameters into TFCDC_WireHitPreparer, e.g. excluding SLs
+    # basf2.set_module_parameters(
+    #    main, "TFCDC_WireHitPreparer", useSuperLayers=[0,1,2,5,6,7,8])
+
     # Load ToCDCCKF parameter set
     with open(args.params, "r") as f:
         params = json.load(f)
@@ -96,6 +100,9 @@ def main():
 
     # Save all dataobjects (not required for search)
     # main.add_module("RootOutput", outputFileName=f"dataset/{finalstate}_reco.root")
+
+    # Print modules in path
+    # basf2.print_path(main)
 
     basf2.process(main)
     # print(basf2.statistics)

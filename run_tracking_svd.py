@@ -84,6 +84,9 @@ def main():
         wirePosition="aligned",
         useSecondHits=False,
         flightTimeEstimation="outwards",
+
+        # select superlayers
+        # useSuperLayers=[0, 1, 2, 5, 6, 7, 8],
     )
 
     # ToCDCCKF module
@@ -135,6 +138,9 @@ def main():
 
     # Save all dataobjects (not required for search)
     # main.add_module("RootOutput", outputFileName=f"dataset/{finalstate}_reco_svd.root")
+
+    # Print modules in path
+    # basf2.print_path(main)
 
     basf2.process(main)
     # print(basf2.statistics)
