@@ -61,6 +61,10 @@ def main():
     # Reproducibility
     basf2.set_random_seed(12345)
 
+    # FIXME: Custom CDC geometry through a payload (c.f. cdc-utilities)
+    # Payload is created using: exp=35, run=1853, global_tag='online'
+    # basf2.conditions.prepend_testing_payloads("./localdb/database.txt")
+
     # Steering Path
     main = basf2.Path()
 
@@ -140,7 +144,7 @@ def main():
     # main.add_module("RootOutput", outputFileName=f"dataset/{finalstate}_reco_svd.root")
 
     # Print modules in path
-    # basf2.print_path(main)
+    basf2.print_path(main)
 
     basf2.process(main)
     # print(basf2.statistics)
